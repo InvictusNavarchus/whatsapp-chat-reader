@@ -1,0 +1,23 @@
+export interface Message {
+  id: number;
+  rawTimestamp: string;
+  timestamp: Date | null;
+  sender: string;
+  content: string;
+  isSystem: boolean;
+  isAttachment: boolean;
+  attachmentType: 'image' | 'video' | 'audio' | 'document' | 'sticker' | null;
+}
+
+export interface ChatStats {
+  totalMessages: number;
+  participants: string[];
+  senderCounts: Record<string, number>;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+export interface SearchMatch {
+  index: number;
+  message: Message;
+}
