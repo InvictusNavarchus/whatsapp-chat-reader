@@ -7,6 +7,7 @@ import {
 	useCallback,
 	useMemo,
 } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { DB_CHUNK_SIZE } from '../utils/db';
 import {
 	ChevronDown,
@@ -242,125 +243,22 @@ const MessageBubble = memo(function MessageBubble({
 	);
 });
 
-interface MessageChunkProps {
-	chunkIndex: number;
-	messages: Message[];
-	me: string | null;
-	searchQuery: string;
-	starredMessageIds: Set<number>;
-	onToggleStarMessage: (id: number) => void;
-	isForceRendered: boolean;
-	onMeasured: (index: number, height: number) => void;
-	cachedHeight: number | null;
-	highlightedId: number | null;
-	onLoadChunk: (index: number) => void;
-}
-
-const MessageChunk = memo(function MessageChunk({
-	chunkIndex,
-	messages,
-	me,
-	searchQuery,
-	starredMessageIds,
-	onToggleStarMessage,
-	isForceRendered,
-	onMeasured,
-	cachedHeight,
-	highlightedId,
+const PlaceholderItem = memo(function PlaceholderItem({
+	index,
 	onLoadChunk,
-}: MessageChunkProps) {
-	const [isIntersecting, setIsIntersecting] = useState(false);
-	const containerRef = useRef<HTMLDivElement>(null);
-
-	const isMounted = isIntersecting || isForceRendered;
-	const estimatedHeight = cachedHeight ?? messages.length * 72; // Avg message height estimate
-
-	const isEmpty = messages.length === 0 || messages[0] === undefined;
+}: {
+	index: number;
+	onLoadChunk: (index: number) => void;
+}) {
+	const chunkIndex = Math.floor(index / DB_CHUNK_SIZE);
 
 	useEffect(() => {
-		const el = containerRef.current;
-		if (!el) return;
-
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				setIsIntersecting(entry.isIntersecting);
-				if (!entry.isIntersecting) {
-					const rect = el.getBoundingClientRect();
-					if (rect.height > 100) {
-						onMeasured(chunkIndex, rect.height);
-					}
-				}
-			},
-			{
-				rootMargin: '600px 0px 600px 0px', // Pre-load viewport margin
-			},
-		);
-
-		observer.observe(el);
-
-		return () => {
-			observer.disconnect();
-		};
-	}, [chunkIndex, onMeasured]);
-
-	// Load chunk when it comes into view (or is force rendered) and its messages are empty/undefined
-	useEffect(() => {
-		if (isMounted && isEmpty) {
-			onLoadChunk(chunkIndex);
-		}
-	}, [isMounted, isEmpty, chunkIndex, onLoadChunk]);
-
-	if (!isMounted) {
-		return (
-			<div
-				ref={containerRef}
-				data-chunk-index={chunkIndex}
-				style={{ height: `${estimatedHeight}px` }}
-				className="w-full"
-			/>
-		);
-	}
-
-	if (isEmpty) {
-		return (
-			<div
-				ref={containerRef}
-				data-chunk-index={chunkIndex}
-				style={{ height: `${estimatedHeight}px` }}
-				className="w-full flex items-center justify-center py-8"
-			>
-				<Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
-			</div>
-		);
-	}
+		onLoadChunk(chunkIndex);
+	}, [chunkIndex, onLoadChunk]);
 
 	return (
-		<div
-			ref={containerRef}
-			data-chunk-index={chunkIndex}
-			className="w-full flex flex-col"
-			style={{ minHeight: cachedHeight ? `${cachedHeight}px` : undefined }}
-		>
-			{messages.map((message) => {
-				const isMe = me !== null && message.sender === me;
-				const isHighlighted = highlightedId === message.id;
-				const isStarred = starredMessageIds.has(message.id);
-
-				return (
-					<div key={message.id} className="py-1.5 px-4 md:px-8">
-						<div className="w-full max-w-4xl mx-auto">
-							<MessageBubble
-								message={message}
-								isMe={isMe}
-								searchQuery={searchQuery}
-								isHighlighted={isHighlighted}
-								isStarred={isStarred}
-								onToggleStar={() => onToggleStarMessage(message.id)}
-							/>
-						</div>
-					</div>
-				);
-			})}
+		<div className="w-full flex items-center justify-center py-4 min-h-[72px]">
+			<Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
 		</div>
 	);
 });
@@ -378,40 +276,23 @@ export default function VirtualMessageList({
 	const parentRef = useRef<HTMLDivElement>(null);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
 	const [highlightedId, setHighlightedId] = useState<number | null>(null);
-	const [forceRenderChunkIndex, setForceRenderChunkIndex] = useState<
-		number | null
-	>(null);
-	const [chunkHeights, setChunkHeights] = useState<Record<number, number>>({});
 
-	// Split messages into chunk groups
-	const chunks = useMemo(() => {
-		const result: { id: string; messages: Message[] }[] = [];
-		let chunkIndex = 0;
-		for (let i = 0; i < messages.length; i += DB_CHUNK_SIZE) {
-			result.push({
-				id: `chunk-${chunkIndex}`,
-				messages: messages.slice(i, i + DB_CHUNK_SIZE),
-			});
-			chunkIndex++;
-		}
-		return result;
-	}, [messages]);
+	const rowVirtualizer = useVirtualizer({
+		count: messages.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 72,
+		getItemKey: useCallback(
+			(index: number) => messages[index]?.id ?? `placeholder-${index}`,
+			[messages],
+		),
+		anchorTo: 'end',
+		overscan: 15,
+	});
 
-	const handleChunkMeasured = useCallback((index: number, height: number) => {
-		setChunkHeights((prev) => {
-			if (prev[index] === height) return prev;
-			return { ...prev, [index]: height };
-		});
-	}, []);
-
-	// Reset cached heights on window resize
-	useEffect(() => {
-		const handleResize = () => {
-			setChunkHeights({});
-		};
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
-	}, []);
+	rowVirtualizer.shouldAdjustScrollPositionOnItemSizeChange = useCallback(
+		(item, delta, instance) => item.start < (instance.scrollOffset ?? 0),
+		[],
+	);
 
 	// Handle scrolling to bottom and showing/hiding the button
 	const handleScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -421,66 +302,31 @@ export default function VirtualMessageList({
 		setShowScrollBottom(isUp);
 	};
 
-	// Jump to message logic
+	// Scroll to target index
+	useEffect(() => {
+		if (jumpToIndex !== null) {
+			rowVirtualizer.scrollToIndex(jumpToIndex, {
+				align: 'center',
+				behavior: 'auto',
+			});
+
+			const chunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
+			onLoadChunk(chunkIndex);
+		}
+	}, [jumpToIndex, onLoadChunk, rowVirtualizer]);
+
+	// Highlight target index once the message data is loaded
 	useEffect(() => {
 		if (jumpToIndex !== null) {
 			const targetMessage = messages[jumpToIndex];
-			if (!targetMessage) return;
-
-			const targetChunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
-			console.log(
-				'Jumping to index:',
-				jumpToIndex,
-				'Message ID:',
-				targetMessage.id,
-				'Chunk Index:',
-				targetChunkIndex,
-			);
-
-			setForceRenderChunkIndex(targetChunkIndex);
-
-			let flashTimer: ReturnType<typeof setTimeout> | undefined;
-			let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-			const tryScroll = () => {
-				const el = document.getElementById(`message-${targetMessage.id}`);
-				if (el) {
-					el.scrollIntoView({ block: 'center', behavior: 'auto' });
-					setHighlightedId(targetMessage.id);
-					flashTimer = setTimeout(() => {
-						setHighlightedId(null);
-					}, 3000);
-					onJumpDone();
-					return true;
-				}
-				return false;
-			};
-
-			if (tryScroll()) {
-				return () => {
-					if (flashTimer) clearTimeout(flashTimer);
-				};
+			if (targetMessage) {
+				setHighlightedId(targetMessage.id);
+				const timer = setTimeout(() => {
+					setHighlightedId(null);
+				}, 3000);
+				onJumpDone();
+				return () => clearTimeout(timer);
 			}
-
-			const rafId = requestAnimationFrame(() => {
-				if (tryScroll()) return;
-				timeoutId = setTimeout(() => {
-					if (!tryScroll()) {
-						onJumpDone();
-					}
-				}, 60);
-			});
-
-			const clearForceTimer = setTimeout(() => {
-				setForceRenderChunkIndex(null);
-			}, 1200);
-
-			return () => {
-				cancelAnimationFrame(rafId);
-				if (timeoutId) clearTimeout(timeoutId);
-				if (flashTimer) clearTimeout(flashTimer);
-				clearTimeout(clearForceTimer);
-			};
 		}
 	}, [jumpToIndex, messages, onJumpDone]);
 
@@ -492,6 +338,9 @@ export default function VirtualMessageList({
 			});
 		}
 	};
+
+	const virtualItems = rowVirtualizer.getVirtualItems();
+	const firstItem = virtualItems[0];
 
 	return (
 		<div className="relative flex-1 bg-[#efeae2] overflow-hidden flex flex-col h-full">
@@ -511,22 +360,63 @@ export default function VirtualMessageList({
 				className="flex-1 overflow-y-auto relative py-4 focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
 				style={{ overflowAnchor: 'auto' }}
 			>
-				{chunks.map((chunk, index) => (
-					<MessageChunk
-						key={chunk.id}
-						chunkIndex={index}
-						messages={chunk.messages}
-						me={me}
-						searchQuery={searchQuery}
-						starredMessageIds={starredMessageIds}
-						onToggleStarMessage={onToggleStarMessage}
-						isForceRendered={forceRenderChunkIndex === index}
-						onMeasured={handleChunkMeasured}
-						cachedHeight={chunkHeights[index] ?? null}
-						highlightedId={highlightedId}
-						onLoadChunk={onLoadChunk}
-					/>
-				))}
+				<div
+					style={{
+						height: `${rowVirtualizer.getTotalSize()}px`,
+						width: '100%',
+						position: 'relative',
+					}}
+				>
+					<div
+						style={{
+							transform: `translateY(${firstItem ? firstItem.start : 0}px)`,
+							position: 'absolute',
+							left: 0,
+							top: 0,
+							width: '100%',
+						}}
+					>
+						{virtualItems.map((virtualItem) => {
+							const message = messages[virtualItem.index];
+							const isMe = message
+								? me !== null && message.sender === me
+								: false;
+							const isHighlighted = message
+								? highlightedId === message.id
+								: false;
+							const isStarred = message
+								? starredMessageIds.has(message.id)
+								: false;
+
+							return (
+								<div
+									key={virtualItem.key}
+									ref={rowVirtualizer.measureElement}
+									data-index={virtualItem.index}
+									className="py-1.5 px-4 md:px-8 w-full"
+								>
+									<div className="w-full max-w-4xl mx-auto">
+										{message ? (
+											<MessageBubble
+												message={message}
+												isMe={isMe}
+												searchQuery={searchQuery}
+												isHighlighted={isHighlighted}
+												isStarred={isStarred}
+												onToggleStar={() => onToggleStarMessage(message.id)}
+											/>
+										) : (
+											<PlaceholderItem
+												index={virtualItem.index}
+												onLoadChunk={onLoadChunk}
+											/>
+										)}
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				</div>
 			</div>
 
 			{/* Floating Scroll-to-Bottom Widget */}
