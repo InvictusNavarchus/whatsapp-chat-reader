@@ -20,25 +20,32 @@ export default function SearchPanel({
   onSearchQueryChange,
 }: SearchPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [draftQuery, setDraftQuery] = useState(searchQuery);
 
   // Focus search input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Compute matches based on query
+  // Debounce the search query change to avoid heavy rendering during active typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchQueryChange(draftQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [draftQuery, onSearchQueryChange]);
+
+  // Compute matches based on search query (uses pre-calculated contentLower for maximum performance)
   const matches: SearchMatch[] = useMemo(() => {
     if (!searchQuery || searchQuery.trim().length < 2) return [];
 
     const queryLower = searchQuery.toLowerCase();
     const results: SearchMatch[] = [];
 
-    // Scan through all messages to find occurrences
+    // Scan through pre-indexed lowercase content
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      // Skip system messages and attachments if we are searching for text specifically,
-      // but let's check content regardless.
-      if (msg.content.toLowerCase().includes(queryLower)) {
+      if (msg.contentLower.includes(queryLower)) {
         results.push({
           index: i,
           message: msg,
@@ -55,10 +62,11 @@ export default function SearchPanel({
   }, [matches]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearchQueryChange(e.target.value);
+    setDraftQuery(e.target.value);
   };
 
   const clearSearch = () => {
+    setDraftQuery('');
     onSearchQueryChange('');
     inputRef.current?.focus();
   };
@@ -86,13 +94,13 @@ export default function SearchPanel({
           <input
             type="text"
             ref={inputRef}
-            value={searchQuery}
+            value={draftQuery}
             onChange={handleInputChange}
             placeholder="Search words, phrases..."
             className="w-full pl-9 pr-8 py-2 border border-neutral-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-neutral-400 bg-neutral-50/50"
           />
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-400" />
-          {searchQuery && (
+          {draftQuery && (
             <button
               type="button"
               onClick={clearSearch}

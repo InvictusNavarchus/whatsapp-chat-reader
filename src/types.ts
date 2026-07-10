@@ -4,6 +4,7 @@ export interface Message {
   timestamp: Date | null;
   sender: string;
   content: string;
+  contentLower: string;
   isSystem: boolean;
   isAttachment: boolean;
   attachmentType: 'image' | 'video' | 'audio' | 'document' | 'sticker' | null;

@@ -13,20 +13,30 @@ interface VirtualMessageListProps {
 // Escape helper for regex search highlights
 const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Helper to generate consistent readable pastel colors for sender names
+// Helper to generate consistent readable pastel colors for sender names (cached for performance)
+const senderColorCache = new Map<string, string>();
 function getSenderColor(sender: string): string {
+  const cached = senderColorCache.get(sender);
+  if (cached) return cached;
+  
   let hash = 0;
   for (let i = 0; i < sender.length; i++) {
     hash = sender.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hues = [340, 20, 145, 195, 240, 280, 315];
   const hue = hues[Math.abs(hash) % hues.length];
-  return `hsl(${hue}, 70%, 35%)`;
+  const color = `hsl(${hue}, 70%, 35%)`;
+  senderColorCache.set(sender, color);
+  return color;
 }
 
 // Text highlighting helper component
 function HighlightedText({ text, search }: { text: string; search: string }) {
-  if (!search) {
+  if (!search || search.trim().length < 2) {
+    return <span className="whitespace-pre-wrap">{text}</span>;
+  }
+  // Fast path: if the text doesn't contain the search query, avoid RegExp allocations completely
+  if (!text.toLowerCase().includes(search.toLowerCase())) {
     return <span className="whitespace-pre-wrap">{text}</span>;
   }
   const parts = text.split(new RegExp(`(${escapeRegExp(search)})`, 'gi'));
@@ -93,31 +103,26 @@ function MediaAttachment({ type, content }: { type: Message['attachmentType']; c
 /**
  * Estimates the height of a message bubble. This ensures the virtual scrollbar matches
  * the overall size, regardless of what index is in the viewport.
+ * Optimized to be extremely fast and completely independent of window width so it computes
+ * EXACTLY ONCE per loaded file and never triggers during search panel opening/closing.
  */
-function estimateHeight(message: Message, width: number): number {
+function estimateHeight(message: Message): number {
   if (message.isSystem) {
     const textLength = message.content.length;
     const lines = Math.max(1, Math.ceil(textLength / 45));
     return lines * 20 + 24; // 20px per line + 24px vertical padding
   }
 
-  // Width of typical mobile content area
-  const bubbleWidth = width * 0.75 - 40;
-  const avgCharWidth = 8.2;
-  const charsPerLine = Math.max(15, Math.floor(bubbleWidth / avgCharWidth));
-
-  const paragraphs = message.content.split('\n');
-  let estimatedLines = 0;
-  for (const p of paragraphs) {
-    estimatedLines += Math.max(1, Math.ceil(p.length / charsPerLine));
-  }
+  const textLength = message.content.length;
+  // A standard chat bubble line on mobile holds roughly 55-60 characters
+  const estimatedLines = Math.max(1, Math.ceil(textLength / 55));
 
   // Header sender name height
   const headerHeight = message.sender && message.sender !== 'System' ? 18 : 0;
   // Footer timestamp height
   const footerHeight = 14;
   // Media card height
-  const mediaHeight = message.isAttachment ? 56 : 0;
+  const mediaHeight = message.isAttachment ? 60 : 0;
   // Vertical spacing
   const verticalSpacing = 16;
 
@@ -158,18 +163,19 @@ export default function VirtualMessageList({
     return () => observer.disconnect();
   }, []);
 
-  // Compute cumulative heights and total height based on estimates
+  // Compute cumulative heights and total height based on estimates.
+  // This computes EXACTLY ONCE when the chat is loaded.
   const { cumulativeHeights, totalHeight } = useMemo(() => {
     const heights = new Array(messages.length + 1);
     heights[0] = 0;
     for (let i = 0; i < messages.length; i++) {
-      heights[i + 1] = heights[i] + estimateHeight(messages[i], containerWidth);
+      heights[i + 1] = heights[i] + estimateHeight(messages[i]);
     }
     return {
       cumulativeHeights: heights,
       totalHeight: heights[messages.length],
     };
-  }, [messages, containerWidth]);
+  }, [messages]);
 
   // Binary search to find the start index for rendering window
   const findStartIndex = (st: number) => {

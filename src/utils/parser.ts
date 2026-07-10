@@ -107,14 +107,21 @@ export function parseWhatsAppChat(text: string): Message[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.trim() === '') continue;
+    if (line.length === 0) continue;
 
-    // Check if the line matches any message pattern
-    const match = line.match(ANDROID_REGEX) || line.match(IOS_REGEX) || line.match(FALLBACK_REGEX);
+    // Fast-path pre-check: a valid message header MUST start with a digit (Android/Fallback) or '[' (iOS).
+    const firstCode = line.charCodeAt(0);
+    const isPossibleHeader = (firstCode >= 48 && firstCode <= 57) || firstCode === 91;
+
+    // Check if the line matches any message pattern if the pre-check passed
+    const match = isPossibleHeader
+      ? (line.match(ANDROID_REGEX) || line.match(IOS_REGEX) || line.match(FALLBACK_REGEX))
+      : null;
 
     if (match) {
-      // Save the previous message if exists
+      // Save the previous message if exists, computing contentLower once
       if (currentMessage) {
+        currentMessage.contentLower = currentMessage.content.toLowerCase();
         messages.push(currentMessage);
       }
 
@@ -190,6 +197,7 @@ export function parseWhatsAppChat(text: string): Message[] {
         timestamp,
         sender,
         content,
+        contentLower: '', // will be set once finalized
         isSystem,
         isAttachment,
         attachmentType,
@@ -206,6 +214,7 @@ export function parseWhatsAppChat(text: string): Message[] {
           timestamp: null,
           sender: 'System',
           content: line,
+          contentLower: '',
           isSystem: true,
           isAttachment: false,
           attachmentType: null,
@@ -216,6 +225,7 @@ export function parseWhatsAppChat(text: string): Message[] {
 
   // Add the last message
   if (currentMessage) {
+    currentMessage.contentLower = currentMessage.content.toLowerCase();
     messages.push(currentMessage);
   }
 
