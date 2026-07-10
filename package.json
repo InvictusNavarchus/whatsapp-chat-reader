@@ -1,10 +1,10 @@
 {
-	"name": "react-example",
+	"name": "whatsapp-chat-reader",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "vite --port=3000 --host=0.0.0.0",
+		"dev": "vite",
 		"build": "vite build",
 		"preview": "bun run build && wrangler dev",
 		"clean": "rm -rf dist server.js",
