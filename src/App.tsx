@@ -29,7 +29,7 @@ export default function App() {
 	const [parseProgress, setParseProgress] = useState<number | null>(null);
 
 	// Defer mounting heavy VirtualMessageList to let loading view paint first
-	const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
+	const [isConversationReady, setIsConversationReady] = useState(false);
 
 	const handleChatLoaded = (text: string, name: string) => {
 		setIsParsing(true);
@@ -91,7 +91,7 @@ export default function App() {
 					setStep('SELECT_IDENTITY');
 				} else {
 					setMe(null);
-					setIsWorkspaceReady(false);
+					setIsConversationReady(false);
 					setStep('READER');
 				}
 			} else if (type === 'error') {
@@ -113,7 +113,7 @@ export default function App() {
 
 	const handleIdentitySelected = (name: string | null) => {
 		setMe(name);
-		setIsWorkspaceReady(false);
+		setIsConversationReady(false);
 		setStep('READER');
 	};
 
@@ -122,7 +122,7 @@ export default function App() {
 			window.confirm('Are you sure you want to unload the current chat log?')
 		) {
 			setStep('UPLOAD');
-			setIsWorkspaceReady(false);
+			setIsConversationReady(false);
 			setMessages([]);
 			setDateMap([]);
 			setFileName('');
@@ -256,7 +256,7 @@ export default function App() {
 						transition={{ duration: 0.3 }}
 						onAnimationComplete={() => {
 							if (step === 'READER') {
-								setIsWorkspaceReady(true);
+								setIsConversationReady(true);
 							}
 						}}
 						className="flex-1 flex flex-col h-screen overflow-hidden"
@@ -276,7 +276,7 @@ export default function App() {
 
 						{/* Chat Area Content Workspace */}
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-center">
-							{isWorkspaceReady ? (
+							{isConversationReady ? (
 								<>
 									{/* Main Scrolling Viewer */}
 									<VirtualMessageList
@@ -316,7 +316,7 @@ export default function App() {
 								<div className="flex flex-col items-center justify-center gap-3 py-12">
 									<Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
 									<p className="text-neutral-500 font-sans text-sm font-medium animate-pulse">
-										Loading conversation workspace...
+										Loading conversation...
 									</p>
 								</div>
 							)}
