@@ -7,6 +7,16 @@ import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
 import type { Message, DateMapEntry } from './types';
 import { Loader2, ShieldCheck } from 'lucide-react';
+import {
+	saveChat,
+	getChatMetadata,
+	getChatMessages,
+	listChats,
+	renameChat,
+	updateChatMe,
+	deleteChat,
+	type ChatMetadata,
+} from './utils/db';
 
 type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
 
@@ -19,6 +29,10 @@ export default function App() {
 	const [senderCounts, setSenderCounts] = useState<Record<string, number>>({});
 	const [me, setMe] = useState<string | null>(null);
 
+	// Saved chats state
+	const [savedChats, setSavedChats] = useState<ChatMetadata[]>([]);
+	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
 	// Search and Scroll Navigation coordination
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +44,16 @@ export default function App() {
 
 	// Defer mounting heavy VirtualMessageList to let loading view paint first
 	const [isConversationReady, setIsConversationReady] = useState(false);
+
+	const loadSavedChats = () => {
+		listChats()
+			.then(setSavedChats)
+			.catch((err) => console.error('Failed to load saved chats:', err));
+	};
+
+	useEffect(() => {
+		loadSavedChats();
+	}, []);
 
 	const handleChatLoaded = (text: string, name: string) => {
 		setIsParsing(true);
@@ -85,6 +109,23 @@ export default function App() {
 				setSenderCounts(parsedSenderCounts || {});
 				setFileName(name);
 
+				// Auto-save to IndexedDB
+				saveChat(
+					name,
+					parsed,
+					parsedDateMap || [],
+					participantList,
+					parsedSenderCounts || {},
+					null,
+				)
+					.then((id) => {
+						setCurrentChatId(id);
+						loadSavedChats();
+					})
+					.catch((err) => {
+						console.error('Failed to auto-save chat:', err);
+					});
+
 				// If there are clear participants, let the user pick their own identity,
 				// otherwise jump straight to the reader view.
 				if (participantList.length > 0) {
@@ -115,6 +156,12 @@ export default function App() {
 		setMe(name);
 		setIsConversationReady(false);
 		setStep('READER');
+
+		if (currentChatId) {
+			updateChatMe(currentChatId, name)
+				.then(() => loadSavedChats())
+				.catch((err) => console.error('Failed to update me identity:', err));
+		}
 	};
 
 	const handleBackToUpload = () => {
@@ -129,9 +176,110 @@ export default function App() {
 			setParticipants([]);
 			setSenderCounts({});
 			setMe(null);
+			setCurrentChatId(null);
 			setIsSearchOpen(false);
 			setSearchQuery('');
 			setJumpToIndex(null);
+			loadSavedChats(); // Refresh on back
+		}
+	};
+
+	const handleLoadSavedChat = async (id: string) => {
+		setIsParsing(true);
+		setParseProgress(0);
+		try {
+			const metadata = await getChatMetadata(id);
+			if (!metadata) {
+				alert('Saved chat metadata not found.');
+				setIsParsing(false);
+				return;
+			}
+
+			setParseProgress(30);
+			const chatData = await getChatMessages(id);
+			if (!chatData) {
+				alert('Saved chat messages not found.');
+				setIsParsing(false);
+				return;
+			}
+
+			setParseProgress(70);
+
+			// Update lastOpened in IndexedDB
+			await saveChat(
+				metadata.fileName,
+				chatData.messages,
+				chatData.dateMap,
+				metadata.participants,
+				metadata.senderCounts,
+				metadata.me,
+				id,
+			);
+
+			setParseProgress(100);
+
+			setMessages(chatData.messages);
+			setDateMap(chatData.dateMap);
+			setParticipants(metadata.participants);
+			setSenderCounts(metadata.senderCounts);
+			setFileName(metadata.fileName);
+			setMe(metadata.me);
+			setCurrentChatId(id);
+
+			setIsParsing(false);
+			setParseProgress(null);
+
+			// If me is set, skip SELECT_IDENTITY and go straight to READER
+			if (metadata.me) {
+				setIsConversationReady(false);
+				setStep('READER');
+			} else if (metadata.participants.length > 0) {
+				setStep('SELECT_IDENTITY');
+			} else {
+				setMe(null);
+				setIsConversationReady(false);
+				setStep('READER');
+			}
+		} catch (err) {
+			console.error('Error loading saved chat:', err);
+			alert('Failed to load saved chat.');
+			setIsParsing(false);
+			setParseProgress(null);
+		}
+	};
+
+	const handleDeleteSavedChat = async (id: string) => {
+		if (
+			window.confirm(
+				'Are you sure you want to permanently delete this saved chat log?',
+			)
+		) {
+			try {
+				await deleteChat(id);
+				loadSavedChats();
+			} catch (err) {
+				console.error('Failed to delete saved chat:', err);
+				alert('Failed to delete saved chat.');
+			}
+		}
+	};
+
+	const handleRenameSavedChat = async (id: string, newName: string) => {
+		try {
+			await renameChat(id, newName);
+			loadSavedChats();
+		} catch (err) {
+			console.error('Failed to rename saved chat:', err);
+			alert('Failed to rename saved chat.');
+		}
+	};
+
+	const handleRenameCurrentChat = (newName: string) => {
+		setFileName(newName);
+		if (currentChatId) {
+			renameChat(currentChatId, newName)
+				.then(() => loadSavedChats())
+				.catch((err) => console.error('Failed to rename current chat:', err));
 		}
 	};
 
@@ -225,7 +373,13 @@ export default function App() {
 						transition={{ duration: 0.25, ease: 'easeOut' }}
 						className="flex-1 flex flex-col justify-center py-6"
 					>
-						<FileUploader onChatLoaded={handleChatLoaded} />
+						<FileUploader
+							onChatLoaded={handleChatLoaded}
+							savedChats={savedChats}
+							onLoadSavedChat={handleLoadSavedChat}
+							onDeleteSavedChat={handleDeleteSavedChat}
+							onRenameSavedChat={handleRenameSavedChat}
+						/>
 					</motion.div>
 				)}
 
@@ -272,6 +426,8 @@ export default function App() {
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={handleJumpToMessage}
 							dateMap={dateMap}
+							onRename={handleRenameCurrentChat}
+							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
 						/>
 
 						{/* Chat Area Content Workspace */}

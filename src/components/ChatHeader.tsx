@@ -6,6 +6,8 @@ import {
 	MessageSquare,
 	ArrowLeft,
 	X,
+	Pencil,
+	Check,
 } from 'lucide-react';
 import type { Message, DateMapEntry } from '../types';
 
@@ -19,6 +21,8 @@ interface ChatHeaderProps {
 	isSearchOpen: boolean;
 	onJumpToMessage: (index: number) => void;
 	dateMap: DateMapEntry[];
+	onRename: (newName: string) => void;
+	onChangeIdentity: () => void;
 }
 
 export default function ChatHeader({
@@ -31,9 +35,48 @@ export default function ChatHeader({
 	isSearchOpen,
 	onJumpToMessage,
 	dateMap,
+	onRename,
+	onChangeIdentity,
 }: ChatHeaderProps) {
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 	const calendarRef = useRef<HTMLDivElement>(null);
+
+	const [isEditingName, setIsEditingName] = useState(false);
+	const displayName = fileName.replace(/\.[^/.]+$/, ''); // strip extension
+	const [editValue, setEditValue] = useState(displayName);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	useEffect(() => {
+		setEditValue(displayName);
+	}, [displayName]);
+
+	useEffect(() => {
+		if (isEditingName && inputRef.current) {
+			inputRef.current.focus();
+			inputRef.current.select();
+		}
+	}, [isEditingName]);
+
+	const handleSaveName = () => {
+		const trimmed = editValue.trim();
+		if (trimmed && trimmed !== displayName) {
+			const extMatch = fileName.match(/\.[^/.]+$/);
+			const ext = extMatch ? extMatch[0] : '';
+			const newFileName =
+				trimmed.endsWith(ext) || !ext ? trimmed : trimmed + ext;
+			onRename(newFileName);
+		}
+		setIsEditingName(false);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === 'Enter') {
+			handleSaveName();
+		} else if (e.key === 'Escape') {
+			setEditValue(displayName);
+			setIsEditingName(false);
+		}
+	};
 
 	// Close calendar popup if clicked outside
 	useEffect(() => {
@@ -49,8 +92,6 @@ export default function ChatHeader({
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	}, []);
 
-	const displayName = fileName.replace(/\.[^/.]+$/, ''); // strip extension
-
 	return (
 		<header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-30">
 			<div className="flex items-center gap-3 min-w-0">
@@ -64,9 +105,40 @@ export default function ChatHeader({
 				</button>
 
 				<div className="min-w-0">
-					<h2 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate max-w-[180px] md:max-w-xs">
-						{displayName}
-					</h2>
+					{isEditingName ? (
+						<div className="flex items-center gap-1.5 py-0.5">
+							<input
+								ref={inputRef}
+								type="text"
+								value={editValue}
+								onChange={(e) => setEditValue(e.target.value)}
+								onBlur={handleSaveName}
+								onKeyDown={handleKeyDown}
+								className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 max-w-[180px] md:max-w-xs"
+							/>
+							<button
+								type="button"
+								onClick={handleSaveName}
+								className="p-1 hover:bg-emerald-50 text-emerald-600 rounded"
+							>
+								<Check className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					) : (
+						<div className="flex items-center gap-1.5 group/title">
+							<h2 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate max-w-[180px] md:max-w-xs">
+								{displayName}
+							</h2>
+							<button
+								type="button"
+								onClick={() => setIsEditingName(true)}
+								className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600 opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity focus:outline-none"
+								title="Rename chat log"
+							>
+								<Pencil className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
 					<p className="text-neutral-400 font-sans text-[11px] leading-tight flex items-center gap-2 truncate mt-0.5">
 						<span className="flex items-center gap-0.5">
 							<Users className="w-3 h-3" />
@@ -77,14 +149,15 @@ export default function ChatHeader({
 							<MessageSquare className="w-3 h-3" />
 							{messages.length.toLocaleString()} messages
 						</span>
-						{me && (
-							<>
-								<span>•</span>
-								<span className="text-emerald-600 font-medium truncate">
-									Me: {me}
-								</span>
-							</>
-						)}
+						<span>•</span>
+						<button
+							type="button"
+							onClick={onChangeIdentity}
+							className="text-emerald-600 hover:text-emerald-700 font-medium truncate hover:underline focus:outline-none flex items-center gap-0.5 cursor-pointer"
+							title="Change who 'Me' is"
+						>
+							{me ? `Me: ${me}` : 'Set "Me" identity'}
+						</button>
 					</p>
 				</div>
 			</div>

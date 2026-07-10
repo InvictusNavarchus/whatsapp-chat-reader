@@ -1,15 +1,70 @@
 import { type ChangeEvent, type DragEvent, useRef, useState } from 'react';
-import { Upload, FileText, BookOpen, AlertCircle } from 'lucide-react';
+import {
+	Upload,
+	FileText,
+	BookOpen,
+	AlertCircle,
+	History,
+	Trash2,
+	Pencil,
+	Check,
+	X,
+	MessageSquare,
+	Users,
+} from 'lucide-react';
 import { SAMPLE_CHAT } from '../utils/sampleChat';
+
+interface SavedChatMetadata {
+	id: string;
+	fileName: string;
+	participants: string[];
+	senderCounts: Record<string, number>;
+	me: string | null;
+	lastOpened: number;
+	messageCount: number;
+}
 
 interface FileUploaderProps {
 	onChatLoaded: (text: string, fileName: string) => void;
+	savedChats: SavedChatMetadata[];
+	onLoadSavedChat: (id: string) => void;
+	onDeleteSavedChat: (id: string) => void;
+	onRenameSavedChat: (id: string, newName: string) => void;
 }
 
-export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
+function formatRelativeTime(timestamp: number): string {
+	const now = Date.now();
+	const diff = now - timestamp;
+	if (diff < 60000) return 'Just now';
+	const minutes = Math.floor(diff / 60000);
+	if (minutes < 60) return `${minutes}m ago`;
+	const hours = Math.floor(diff / 3600000);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(diff / 86400000);
+	if (days === 1) return 'Yesterday';
+	if (days < 7) return `${days}d ago`;
+	return new Date(timestamp).toLocaleDateString([], {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	});
+}
+
+export default function FileUploader({
+	onChatLoaded,
+	savedChats,
+	onLoadSavedChat,
+	onDeleteSavedChat,
+	onRenameSavedChat,
+}: FileUploaderProps) {
 	const [isDragging, setIsDragging] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Inline editing states for saved chats
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [editNameValue, setEditNameValue] = useState('');
+	const renameInputRef = useRef<HTMLInputElement>(null);
 
 	const handleFile = (file: File) => {
 		if (!file.name.endsWith('.txt')) {
@@ -60,6 +115,41 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 		onChatLoaded(SAMPLE_CHAT, 'Weekend Plans (Sample Chat).txt');
 	};
 
+	const startRename = (e: React.MouseEvent, chat: SavedChatMetadata) => {
+		e.stopPropagation();
+		setEditingId(chat.id);
+		// Strip extension for editing
+		const displayName = chat.fileName.replace(/\.[^/.]+$/, '');
+		setEditNameValue(displayName);
+		setTimeout(() => {
+			renameInputRef.current?.focus();
+			renameInputRef.current?.select();
+		}, 50);
+	};
+
+	const cancelRename = (e?: React.MouseEvent | React.FocusEvent) => {
+		e?.stopPropagation();
+		setEditingId(null);
+		setEditNameValue('');
+	};
+
+	const submitRename = (
+		e: React.MouseEvent | React.FormEvent,
+		chat: SavedChatMetadata,
+	) => {
+		e.stopPropagation();
+		e.preventDefault();
+		const trimmed = editNameValue.trim();
+		if (trimmed) {
+			const extMatch = chat.fileName.match(/\.[^/.]+$/);
+			const ext = extMatch ? extMatch[0] : '';
+			const newName = trimmed.endsWith(ext) || !ext ? trimmed : trimmed + ext;
+			onRenameSavedChat(chat.id, newName);
+		}
+		setEditingId(null);
+		setEditNameValue('');
+	};
+
 	return (
 		<div
 			id="file-uploader-container"
@@ -83,7 +173,7 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 				onDragLeave={onDragLeave}
 				onDrop={onDrop}
 				onClick={() => fileInputRef.current?.click()}
-				className={`w-full bg-white rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[260px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+				className={`w-full bg-white rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
 					isDragging
 						? 'border-emerald-500 bg-emerald-50/40 scale-[0.99]'
 						: 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/50'
@@ -136,8 +226,124 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 				</button>
 			</div>
 
+			{/* Saved Chats List */}
+			{savedChats.length > 0 && (
+				<div className="mt-10 w-full">
+					<h3 className="font-sans font-semibold text-neutral-800 text-sm md:text-base mb-4 flex items-center gap-2">
+						<History className="w-4 h-4 text-emerald-600" />
+						Recently Read Chats
+					</h3>
+					<div className="bg-white rounded-2xl border border-neutral-200/60 shadow-sm divide-y divide-neutral-100 overflow-hidden w-full">
+						{savedChats.map((chat) => {
+							const displayName = chat.fileName.replace(/\.[^/.]+$/, '');
+							const isEditing = editingId === chat.id;
+
+							return (
+								<div
+									key={chat.id}
+									onClick={() => onLoadSavedChat(chat.id)}
+									className="group p-4 hover:bg-neutral-50/50 transition-colors flex items-center justify-between gap-4 cursor-pointer"
+								>
+									<div className="min-w-0 flex-1">
+										{isEditing ? (
+											<form
+												onSubmit={(e) => submitRename(e, chat)}
+												className="flex items-center gap-2"
+												onClick={(e) => e.stopPropagation()}
+											>
+												<input
+													ref={renameInputRef}
+													type="text"
+													value={editNameValue}
+													onChange={(e) => setEditNameValue(e.target.value)}
+													onBlur={() => {
+														// Give click event on confirm button priority
+														setTimeout(() => {
+															if (editingId === chat.id) cancelRename();
+														}, 200);
+													}}
+													className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full max-w-xs"
+												/>
+												<button
+													type="submit"
+													className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg"
+													title="Confirm rename"
+												>
+													<Check className="w-4 h-4" />
+												</button>
+												<button
+													type="button"
+													onClick={cancelRename}
+													className="p-1.5 hover:bg-neutral-100 text-neutral-500 rounded-lg"
+													title="Cancel"
+												>
+													<X className="w-4 h-4" />
+												</button>
+											</form>
+										) : (
+											<>
+												<h4 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate group-hover:text-emerald-700 transition-colors">
+													{displayName}
+												</h4>
+												<div className="text-neutral-400 font-sans text-xs flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+													<span className="flex items-center gap-1">
+														<Users className="w-3.5 h-3.5" />
+														{chat.participants.length}
+													</span>
+													<span>•</span>
+													<span className="flex items-center gap-1">
+														<MessageSquare className="w-3.5 h-3.5" />
+														{chat.messageCount.toLocaleString()}
+													</span>
+													<span>•</span>
+													<span>
+														Opened {formatRelativeTime(chat.lastOpened)}
+													</span>
+													{chat.me && (
+														<>
+															<span>•</span>
+															<span className="text-emerald-600/80 font-medium">
+																Me: {chat.me}
+															</span>
+														</>
+													)}
+												</div>
+											</>
+										)}
+									</div>
+
+									{!isEditing && (
+										<div className="flex items-center gap-1 shrink-0">
+											<button
+												type="button"
+												onClick={(e) => startRename(e, chat)}
+												className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none"
+												title="Rename chat log"
+											>
+												<Pencil className="w-4 h-4" />
+											</button>
+											<button
+												type="button"
+												onClick={(e) => {
+													e.stopPropagation();
+													onDeleteSavedChat(chat.id);
+												}}
+												className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
+												title="Delete saved chat"
+											>
+												<Trash2 className="w-4 h-4" />
+											</button>
+										</div>
+									)}
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
 			{/* Instructions Card */}
-			<div className="mt-12 w-full bg-neutral-50 rounded-2xl p-6 md:p-8 border border-neutral-100">
+			<div className="mt-10 w-full bg-neutral-50 rounded-2xl p-6 md:p-8 border border-neutral-100">
 				<h3 className="font-sans font-semibold text-neutral-800 text-sm md:text-base mb-4 flex items-center gap-2">
 					<FileText className="w-4 h-4 text-emerald-600" />
 					How to export your chat from WhatsApp:
