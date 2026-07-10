@@ -31,15 +31,6 @@ export default function App() {
 	// Defer mounting heavy VirtualMessageList to let loading view paint first
 	const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
 
-	useEffect(() => {
-		if (step === 'READER' && !isWorkspaceReady) {
-			const timer = setTimeout(() => {
-				setIsWorkspaceReady(true);
-			}, 100);
-			return () => clearTimeout(timer);
-		}
-	}, [step, isWorkspaceReady]);
-
 	const handleChatLoaded = (text: string, name: string) => {
 		setIsParsing(true);
 		setParseProgress(0);
@@ -263,6 +254,11 @@ export default function App() {
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.3 }}
+						onAnimationComplete={() => {
+							if (step === 'READER') {
+								setIsWorkspaceReady(true);
+							}
+						}}
 						className="flex-1 flex flex-col h-screen overflow-hidden"
 					>
 						{/* Header Area */}
