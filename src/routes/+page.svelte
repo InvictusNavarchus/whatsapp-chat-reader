@@ -52,6 +52,18 @@ let parseProgress = $state<number | null>(null);
 // Defer mounting heavy VirtualMessageList to let loading view paint first
 let isConversationReady = $state(false);
 
+// Automatically set conversation as ready shortly after entering the reader step
+$effect(() => {
+	if (step === 'READER') {
+		const timer = setTimeout(() => {
+			isConversationReady = true;
+		}, 100);
+		return () => clearTimeout(timer);
+	} else {
+		isConversationReady = false;
+	}
+});
+
 const loadSavedChats = () => {
 	listChats()
 		.then((chats) => {
@@ -413,9 +425,6 @@ const handleJumpToMessage = (index: number) => {
 		<div
 			transition:fade={{ duration: 250 }}
 			class="flex-1 flex flex-col h-screen overflow-hidden"
-			onintroend={() => {
-				isConversationReady = true;
-			}}
 		>
 			<!-- Header Area -->
 			<ChatHeader
