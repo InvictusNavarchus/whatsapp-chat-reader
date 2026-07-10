@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
-import { ChevronDown, Image, Film, Music, FileText, Smile, Info, ArrowUp } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { ChevronDown, Image, Film, Music, FileText, Smile, Info } from 'lucide-react';
 import { Message } from '../types';
 
 interface VirtualMessageListProps {
@@ -100,48 +101,6 @@ function MediaAttachment({ type, content }: { type: Message['attachmentType']; c
   );
 }
 
-/**
- * Estimates the height of a message bubble. This ensures the virtual scrollbar matches
- * the overall size, regardless of what index is in the viewport.
- * Account for the container width to be extremely precise and avoid height drift.
- */
-function estimateHeight(message: Message, containerWidth: number): number {
-  if (message.isSystem) {
-    const textLength = message.content.length;
-    // System messages are centered and span up to 85% of container width
-    const maxSysWidth = Math.max(200, Math.min(containerWidth, 896) * 0.85 - 30);
-    const charsPerLine = Math.max(25, Math.floor(maxSysWidth / 7.5));
-    const lines = Math.max(1, Math.ceil(textLength / charsPerLine));
-    return lines * 20 + 24; // 20px per line + 24px vertical padding
-  }
-
-  const textLength = message.content.length;
-  // Width of chat bubble area
-  const bubbleWidth = Math.max(200, Math.min(containerWidth, 896) * 0.75 - 40);
-  const avgCharWidth = 8.0;
-  const charsPerLine = Math.max(20, Math.floor(bubbleWidth / avgCharWidth));
-
-  // Handle multi-line messages accurately
-  const paragraphs = message.content.split('\n');
-  let estimatedLines = 0;
-  for (const p of paragraphs) {
-    estimatedLines += Math.max(1, Math.ceil(p.length / charsPerLine));
-  }
-
-  // Header sender name height
-  const headerHeight = message.sender && message.sender !== 'System' ? 18 : 0;
-  // Footer timestamp height
-  const footerHeight = 14;
-  // Media card height
-  const mediaHeight = message.isAttachment ? 60 : 0;
-  // Vertical spacing
-  const verticalSpacing = 16;
-
-  const textHeight = estimatedLines * 18;
-
-  return textHeight + headerHeight + footerHeight + mediaHeight + verticalSpacing;
-}
-
 // Memoized message bubble to prevent unneeded re-renders on scroll or search
 const MessageBubble = React.memo(function MessageBubble({
   message,
@@ -229,135 +188,32 @@ export default function VirtualMessageList({
   jumpToIndex,
   onJumpDone,
 }: VirtualMessageListProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(600);
-  const [containerWidth, setContainerWidth] = useState(375);
+  const parentRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  const rafRef = useRef<number | null>(null);
 
-  // Recalculate container dimensions with a small debounce to avoid spamming layout/state changes
-  useEffect(() => {
-    let resizeTimeout: NodeJS.Timeout | null = null;
+  // TanStack Virtual configuration
+  const rowVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 80, // Corrected by measureElement dynamically
+    getItemKey: (index) => messages[index]?.id ?? index,
+    overscan: 10,
+  });
 
-    const handleResize = () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-      
-      resizeTimeout = setTimeout(() => {
-        if (containerRef.current) {
-          setViewportHeight(containerRef.current.clientHeight);
-          setContainerWidth(containerRef.current.clientWidth);
-        }
-      }, 60);
-    };
-
-    if (containerRef.current) {
-      setViewportHeight(containerRef.current.clientHeight);
-      setContainerWidth(containerRef.current.clientWidth);
-    }
-
-    const observer = new ResizeObserver(handleResize);
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
-    return () => {
-      observer.disconnect();
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-    };
-  }, []);
-
-  // Compute cumulative heights and total height based on estimates.
-  // This computes whenever messages change or container width changes.
-  const { cumulativeHeights, totalHeight } = useMemo(() => {
-    const heights = new Array(messages.length + 1);
-    heights[0] = 0;
-    for (let i = 0; i < messages.length; i++) {
-      heights[i + 1] = heights[i] + estimateHeight(messages[i], containerWidth);
-    }
-    return {
-      cumulativeHeights: heights,
-      totalHeight: heights[messages.length],
-    };
-  }, [messages, containerWidth]);
-
-  // Binary search to find the start index for rendering window
-  const findStartIndex = (st: number) => {
-    let low = 0;
-    let high = cumulativeHeights.length - 1;
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      if (cumulativeHeights[mid] <= st) {
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-    return Math.max(0, low - 1);
-  };
-
+  // Handle scrolling to bottom and showing/hiding the button
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
-    const top = target.scrollTop;
-    const scrollHeight = target.scrollHeight;
-    const clientHeight = target.clientHeight;
-
-    if (rafRef.current !== null) {
-      return;
-    }
-
-    rafRef.current = requestAnimationFrame(() => {
-      setScrollTop(top);
-      
-      // Show scroll to bottom button if we are scrolled up significantly
-      const isUp = scrollHeight - top - clientHeight > 400;
-      setShowScrollBottom(isUp);
-      
-      rafRef.current = null;
-    });
+    const isUp = target.scrollHeight - target.scrollTop - target.clientHeight > 400;
+    setShowScrollBottom(isUp);
   };
 
-  // Clean up raf on unmount
+  // Jump to message logic using built-in scrollToIndex
   useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, []);
+    if (jumpToIndex !== null) {
+      rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
 
-  // Determine indices of items in current viewport
-  const visibleStartIndex = findStartIndex(scrollTop);
-  const visibleEndIndex = findStartIndex(scrollTop + viewportHeight);
-
-  // Extend index buffers slightly to ensure fluid scrolling without flickering
-  const start = Math.max(0, visibleStartIndex - 15);
-  const end = Math.min(messages.length, visibleEndIndex + 20);
-
-  const visibleItems = useMemo(() => {
-    return messages.slice(start, end);
-  }, [messages, start, end]);
-
-  // Height calculations for spacing buffers
-  const topSpacerHeight = cumulativeHeights[start];
-  const bottomSpacerHeight = totalHeight - cumulativeHeights[end];
-
-  // Jump index scrolling logic
-  useLayoutEffect(() => {
-    if (jumpToIndex !== null && containerRef.current) {
-      const estimatedY = cumulativeHeights[jumpToIndex];
-      // Place the jumped message in the upper-middle region of the viewport
-      const targetScroll = Math.max(0, estimatedY - viewportHeight / 3);
-      
-      containerRef.current.scrollTop = targetScroll;
-      setScrollTop(targetScroll);
-      
-      // Flash animation on the selected message
+      // Trigger the flash animation on the selected message
       setHighlightedId(messages[jumpToIndex].id);
       const timer = setTimeout(() => {
         setHighlightedId(null);
@@ -366,12 +222,12 @@ export default function VirtualMessageList({
       onJumpDone();
       return () => clearTimeout(timer);
     }
-  }, [jumpToIndex, cumulativeHeights, viewportHeight, messages, onJumpDone]);
+  }, [jumpToIndex, rowVirtualizer, messages, onJumpDone]);
 
   const scrollToBottom = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
+    if (parentRef.current) {
+      parentRef.current.scrollTo({
+        top: parentRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
@@ -390,35 +246,45 @@ export default function VirtualMessageList({
 
       {/* Main Scroll Container */}
       <div
-        id="chat-scroll-container"
-        ref={containerRef}
+        ref={parentRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto relative py-4 scroll-smooth focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
       >
-        <div style={{ minHeight: totalHeight, width: '100%' }} className="flex flex-col">
-          {/* Spacer to push visible content down */}
-          <div style={{ height: topSpacerHeight }} className="w-full shrink-0" />
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const message = messages[virtualRow.index];
+            const isMe = me !== null && message.sender === me;
+            const isHighlighted = highlightedId === message.id;
 
-          {/* Render Active Window Content */}
-          <div className="flex flex-col gap-2.5 px-4 md:px-8 w-full max-w-4xl mx-auto">
-            {visibleItems.map((message) => {
-              const isMe = me !== null && message.sender === me;
-              const isHighlighted = highlightedId === message.id;
-
-              return (
+            return (
+              <div
+                key={virtualRow.key}
+                ref={rowVirtualizer.measureElement}
+                data-index={virtualRow.index}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+                className="px-4 md:px-8 w-full max-w-4xl mx-auto py-1.5"
+              >
                 <MessageBubble
-                  key={message.id}
                   message={message}
                   isMe={isMe}
                   searchQuery={searchQuery}
                   isHighlighted={isHighlighted}
                 />
-              );
-            })}
-          </div>
-
-          {/* Spacer to push remaining space */}
-          <div style={{ height: bottomSpacerHeight }} className="w-full shrink-0" />
+              </div>
+            );
+          })}
         </div>
       </div>
 
