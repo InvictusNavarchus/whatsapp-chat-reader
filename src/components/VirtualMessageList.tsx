@@ -233,6 +233,7 @@ const MessageBubble = memo(function MessageBubble({
 								className={`w-3.5 h-3.5 ${isStarred ? 'fill-amber-500' : ''}`}
 							/>
 						</button>
+						{message.isEdited && <span>Edited</span>}
 						<span>{message.formattedTime}</span>
 					</div>
 				</div>
