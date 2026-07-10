@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -46,6 +46,15 @@ export default function App() {
 
 	// Loaded chunks tracking state for dynamic chunking
 	const [loadedChunks, setLoadedChunks] = useState<Set<number>>(new Set());
+
+	const currentChatIdRef = useRef<string | null>(null);
+	currentChatIdRef.current = currentChatId;
+
+	const fetchingChunksRef = useRef<Set<number>>(new Set());
+
+	useEffect(() => {
+		fetchingChunksRef.current.clear();
+	}, [currentChatId]);
 
 	// Search and Scroll Navigation coordination
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -384,10 +393,13 @@ export default function App() {
 				const next = new Set(prev);
 				next.add(index);
 
+				const chatIdAtCallTime = currentChatId;
+
 				// Trigger fetch asynchronously to avoid state update cycles in render
 				setTimeout(() => {
-					getChatChunk(currentChatId, index)
+					getChatChunk(chatIdAtCallTime, index)
 						.then((chunkMessages) => {
+							if (currentChatIdRef.current !== chatIdAtCallTime) return;
 							setMessages((messagesPrev) => {
 								if (messagesPrev.length === 0) return messagesPrev;
 								const nextMessages = [...messagesPrev];
@@ -415,11 +427,11 @@ export default function App() {
 	useEffect(() => {
 		if (!currentChatId || step !== 'READER' || messages.length === 0) return;
 
-		// Find chunks that haven't been loaded yet
+		// Find chunks that haven't been loaded yet and are not in progress
 		const unloadedChunkIndices: number[] = [];
 		const chunkCount = Math.ceil(messages.length / DB_CHUNK_SIZE);
 		for (let i = 0; i < chunkCount; i++) {
-			if (!loadedChunks.has(i)) {
+			if (!loadedChunks.has(i) && !fetchingChunksRef.current.has(i)) {
 				unloadedChunkIndices.push(i);
 			}
 		}
@@ -429,20 +441,16 @@ export default function App() {
 		// Load the next unloaded chunk from latest to oldest
 		unloadedChunkIndices.sort((a, b) => b - a);
 		const targetChunkIndex = unloadedChunkIndices[0];
+		const chatIdAtCallTime = currentChatId;
 
 		let active = true;
 		const timer = setTimeout(() => {
-			// Mark as loaded before fetching to prevent duplicate trigger
-			setLoadedChunks((prev) => {
-				if (prev.has(targetChunkIndex)) return prev;
-				const next = new Set(prev);
-				next.add(targetChunkIndex);
-				return next;
-			});
+			fetchingChunksRef.current.add(targetChunkIndex);
 
-			getChatChunk(currentChatId, targetChunkIndex)
+			getChatChunk(chatIdAtCallTime, targetChunkIndex)
 				.then((chunkMessages) => {
-					if (!active) return;
+					if (!active || currentChatIdRef.current !== chatIdAtCallTime) return;
+
 					setMessages((prev) => {
 						if (prev.length === 0) return prev;
 						const next = [...prev];
@@ -454,12 +462,22 @@ export default function App() {
 						}
 						return next;
 					});
+
+					setLoadedChunks((prev) => {
+						if (prev.has(targetChunkIndex)) return prev;
+						const next = new Set(prev);
+						next.add(targetChunkIndex);
+						return next;
+					});
 				})
 				.catch((err) => {
 					console.error(
 						`Failed to background load chunk ${targetChunkIndex}:`,
 						err,
 					);
+				})
+				.finally(() => {
+					fetchingChunksRef.current.delete(targetChunkIndex);
 				});
 		}, 150); // 150ms breathing room to keep UI extremely responsive
 
