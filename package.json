@@ -1,42 +1,33 @@
 {
-	"name": "react-example",
+	"name": "whatsapp-chat-reader",
 	"private": true,
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite --port=3000 --host=0.0.0.0",
+		"dev": "vite dev --port=3000 --host=0.0.0.0",
 		"build": "vite build",
 		"preview": "vite preview",
-		"clean": "rm -rf dist server.js",
+		"clean": "rm -rf dist .svelte-kit",
 		"format": "biome format --write",
 		"lint": "biome lint",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
 	},
 	"dependencies": {
-		"@google/genai": "^2.11.0",
 		"@tailwindcss/vite": "^4.3.2",
-		"@tanstack/react-virtual": "^3.14.5",
-		"@vitejs/plugin-react": "^6.0.3",
-		"dotenv": "^17.4.2",
-		"express": "^5.2.1",
-		"lucide-react": "^1.24.0",
-		"motion": "^12.42.2",
-		"react": "^19.2.7",
-		"react-dom": "^19.2.7",
-		"vite": "^6.2.3"
+		"@tanstack/svelte-virtual": "^3.13.31",
+		"lucide-svelte": "^0.475.0",
+		"svelte": "^5.56.1",
+		"tailwindcss": "^4.3.2",
+		"vite": "^8.0.16"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.3",
-		"@types/express": "^5.0.6",
+		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^26.1.1",
-		"@types/react": "^19.2.17",
-		"@types/react-dom": "^19.2.3",
-		"autoprefixer": "^10.5.2",
-		"esbuild": "^0.28.1",
 		"lefthook": "^2.1.10",
-		"tailwindcss": "^4.3.2",
-		"tsx": "^4.23.0",
-		"typescript": "~7.0.2",
-		"vite": "^8.1.4"
+		"svelte-check": "^4.6.0",
+		"typescript": "^6.0.3"
 	}
 }
