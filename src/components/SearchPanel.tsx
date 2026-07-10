@@ -70,7 +70,7 @@ export default function SearchPanel({
 	};
 
 	return (
-		<div className="w-full md:w-[380px] bg-white border-l border-neutral-200 flex flex-col h-full shadow-2xl md:shadow-none shrink-0 z-40 relative">
+		<div className="w-full md:w-[380px] bg-white border-l border-neutral-200 flex flex-col h-full shadow-2xl md:shadow-none shrink-0 z-40 relative overflow-hidden">
 			{/* Header */}
 			<div className="p-4 border-b border-neutral-200 flex items-center justify-between shrink-0">
 				<h3 className="font-sans font-semibold text-neutral-800 text-sm md:text-base flex items-center gap-2">

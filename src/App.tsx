@@ -662,7 +662,7 @@ export default function App() {
 													damping: 25,
 													stiffness: 220,
 												}}
-												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full"
+												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full overflow-hidden flex flex-col"
 											>
 												<SearchPanel
 													messages={messages}
@@ -687,7 +687,7 @@ export default function App() {
 													damping: 25,
 													stiffness: 220,
 												}}
-												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full"
+												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full overflow-hidden flex flex-col"
 											>
 												<StarredPanel
 													messages={messages}
