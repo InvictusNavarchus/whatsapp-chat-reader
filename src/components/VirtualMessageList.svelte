@@ -1,4 +1,5 @@
 <script lang="ts">
+import { untrack } from 'svelte';
 import { createVirtualizer } from '@tanstack/svelte-virtual';
 import {
 	ChevronDown,
@@ -69,14 +70,18 @@ const virtualizer = createVirtualizer({
 
 // Keep virtualizer options updated reactively
 $effect(() => {
-	$virtualizer.setOptions({
-		getScrollElement: () => parentRef,
-		get count() {
-			return messages.length;
-		},
-		estimateSize: () => 80,
-		getItemKey: (index) => messages[index]?.id ?? index,
-		overscan: 10,
+	// Track messages.length and parentRef reactively
+	const count = messages.length;
+	const ref = parentRef;
+
+	untrack(() => {
+		$virtualizer.setOptions({
+			getScrollElement: () => ref,
+			count,
+			estimateSize: () => 80,
+			getItemKey: (index) => messages[index]?.id ?? index,
+			overscan: 10,
+		});
 	});
 });
 
