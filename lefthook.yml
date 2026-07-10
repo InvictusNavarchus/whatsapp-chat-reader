@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: false
+  piped: true
+  jobs:
+    - name: typecheck
+      run: bun run typecheck
+    - name: format
+      run: bun run format {staged_files}
+      stage_fixed: true
