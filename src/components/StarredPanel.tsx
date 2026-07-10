@@ -19,7 +19,7 @@ export default function StarredPanel({
 	// Find starred messages and keep track of their original index in the messages array
 	const starredMessages = messages
 		.map((message, index) => ({ message, index }))
-		.filter(({ message }) => starredMessageIds.has(message.id));
+		.filter(({ message }) => message && starredMessageIds.has(message.id));
 
 	return (
 		<div className="w-full md:w-[380px] bg-white border-l border-neutral-200 flex flex-col h-full shadow-2xl md:shadow-none shrink-0 z-40 relative">

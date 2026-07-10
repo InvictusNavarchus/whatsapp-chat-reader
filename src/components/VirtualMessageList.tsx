@@ -7,6 +7,7 @@ import {
 	useCallback,
 	useMemo,
 } from 'react';
+import { DB_CHUNK_SIZE } from '../utils/db';
 import {
 	ChevronDown,
 	Image,
@@ -16,6 +17,7 @@ import {
 	Smile,
 	Info,
 	Star,
+	Loader2,
 } from 'lucide-react';
 import type { Message } from '../types';
 
@@ -27,6 +29,7 @@ interface VirtualMessageListProps {
 	onJumpDone: () => void;
 	starredMessageIds: Set<number>;
 	onToggleStarMessage: (id: number) => void;
+	onLoadChunk: (index: number) => void;
 }
 
 // Escape helper for regex search highlights
@@ -238,8 +241,6 @@ const MessageBubble = memo(function MessageBubble({
 	);
 });
 
-const CHUNK_SIZE = 300;
-
 interface MessageChunkProps {
 	chunkIndex: number;
 	messages: Message[];
@@ -251,6 +252,7 @@ interface MessageChunkProps {
 	onMeasured: (index: number, height: number) => void;
 	cachedHeight: number | null;
 	highlightedId: number | null;
+	onLoadChunk: (index: number) => void;
 }
 
 const MessageChunk = memo(function MessageChunk({
@@ -264,12 +266,15 @@ const MessageChunk = memo(function MessageChunk({
 	onMeasured,
 	cachedHeight,
 	highlightedId,
+	onLoadChunk,
 }: MessageChunkProps) {
 	const [isIntersecting, setIsIntersecting] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	const isMounted = isIntersecting || isForceRendered;
 	const estimatedHeight = cachedHeight ?? messages.length * 72; // Avg message height estimate
+
+	const isEmpty = messages.length === 0 || messages[0] === undefined;
 
 	useEffect(() => {
 		const el = containerRef.current;
@@ -297,6 +302,13 @@ const MessageChunk = memo(function MessageChunk({
 		};
 	}, [chunkIndex, onMeasured]);
 
+	// Load chunk when it comes into view (or is force rendered) and its messages are empty/undefined
+	useEffect(() => {
+		if (isMounted && isEmpty) {
+			onLoadChunk(chunkIndex);
+		}
+	}, [isMounted, isEmpty, chunkIndex, onLoadChunk]);
+
 	if (!isMounted) {
 		return (
 			<div
@@ -305,6 +317,19 @@ const MessageChunk = memo(function MessageChunk({
 				style={{ height: `${estimatedHeight}px` }}
 				className="w-full"
 			/>
+		);
+	}
+
+	if (isEmpty) {
+		return (
+			<div
+				ref={containerRef}
+				data-chunk-index={chunkIndex}
+				style={{ height: `${estimatedHeight}px` }}
+				className="w-full flex items-center justify-center py-8"
+			>
+				<Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
+			</div>
 		);
 	}
 
@@ -347,6 +372,7 @@ export default function VirtualMessageList({
 	onJumpDone,
 	starredMessageIds,
 	onToggleStarMessage,
+	onLoadChunk,
 }: VirtualMessageListProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -359,8 +385,8 @@ export default function VirtualMessageList({
 	// Split messages into chunk groups
 	const chunks = useMemo(() => {
 		const result: Message[][] = [];
-		for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
-			result.push(messages.slice(i, i + CHUNK_SIZE));
+		for (let i = 0; i < messages.length; i += DB_CHUNK_SIZE) {
+			result.push(messages.slice(i, i + DB_CHUNK_SIZE));
 		}
 		return result;
 	}, [messages]);
@@ -395,7 +421,7 @@ export default function VirtualMessageList({
 			const targetMessage = messages[jumpToIndex];
 			if (!targetMessage) return;
 
-			const targetChunkIndex = Math.floor(jumpToIndex / CHUNK_SIZE);
+			const targetChunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
 			console.log(
 				'Jumping to index:',
 				jumpToIndex,
@@ -492,6 +518,7 @@ export default function VirtualMessageList({
 						onMeasured={handleChunkMeasured}
 						cachedHeight={chunkHeights[index] ?? null}
 						highlightedId={highlightedId}
+						onLoadChunk={onLoadChunk}
 					/>
 				))}
 			</div>

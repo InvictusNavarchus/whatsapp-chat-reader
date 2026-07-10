@@ -38,7 +38,7 @@ export default function SearchPanel({
 		// Scan through pre-indexed lowercase content
 		for (let i = 0; i < messages.length; i++) {
 			const msg = messages[i];
-			if (msg.contentLower.includes(queryLower)) {
+			if (msg && msg.contentLower.includes(queryLower)) {
 				results.push({
 					index: i,
 					message: msg,
