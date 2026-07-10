@@ -11,7 +11,8 @@
 		"format": "biome format --write",
 		"lint": "biome lint",
 		"typecheck": "tsc --noEmit",
-		"deploy": "bun run build && wrangler deploy"
+		"deploy": "bun run build && wrangler deploy",
+		"doctor": "bunx react-doctor@latest"
 	},
 	"dependencies": {
 		"@google/genai": "^2.11.0",
