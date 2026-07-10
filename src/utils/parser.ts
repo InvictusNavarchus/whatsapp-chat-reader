@@ -136,7 +136,10 @@ function finalizeMessage(msg: Message): Message {
 /**
  * Parses the full WhatsApp export text content into an array of Message objects.
  */
-export function parseWhatsAppChat(text: string): Message[] {
+export function parseWhatsAppChat(
+	text: string,
+	onProgress?: (progress: number) => void,
+): Message[] {
 	// Split content by lines. We preserve lines to reconstruct multiline messages correctly.
 	const lines = text.split(/\r?\n/);
 	const messages: Message[] = [];
@@ -146,10 +149,15 @@ export function parseWhatsAppChat(text: string): Message[] {
 
 	let currentMessage: Message | null = null;
 	let messageCounter = 0;
+	const totalLines = lines.length;
 
-	for (let i = 0; i < lines.length; i++) {
+	for (let i = 0; i < totalLines; i++) {
 		const line = lines[i];
 		if (line.length === 0) continue;
+
+		if (onProgress && i % 5000 === 0 && totalLines > 0) {
+			onProgress(Math.round((i / totalLines) * 100));
+		}
 
 		// Fast-path pre-check: a valid message header MUST start with a digit (Android/Fallback) or '[' (iOS).
 		const firstCode = line.charCodeAt(0);
