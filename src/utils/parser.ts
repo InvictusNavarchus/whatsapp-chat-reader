@@ -243,6 +243,12 @@ export function parseWhatsAppChat(
 				}
 			}
 
+			// Detect edited message
+			let isEdited = false;
+			if (content.endsWith('<This message was edited>')) {
+				isEdited = true;
+				content = content.replace(/<This message was edited>$/, '').trim();
+			}
 			currentMessage = {
 				id: messageCounter++,
 				rawTimestamp: `${rawDate}, ${rawTime}`,
@@ -250,6 +256,7 @@ export function parseWhatsAppChat(
 				sender,
 				content,
 				contentLower: '', // will be set once finalized
+				isEdited,
 				isSystem,
 				isAttachment,
 				attachmentType,
@@ -269,6 +276,7 @@ export function parseWhatsAppChat(
 					sender: 'System',
 					content: line,
 					contentLower: '',
+					isEdited: false,
 					isSystem: true,
 					isAttachment: false,
 					attachmentType: null,

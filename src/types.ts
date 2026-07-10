@@ -5,6 +5,7 @@ export interface Message {
 	sender: string;
 	content: string;
 	contentLower: string;
+	isEdited: boolean;
 	isSystem: boolean;
 	isAttachment: boolean;
 	attachmentType: 'image' | 'video' | 'audio' | 'document' | 'sticker' | null;
