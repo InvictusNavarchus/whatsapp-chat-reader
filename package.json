@@ -15,7 +15,6 @@
 		"doctor": "bunx react-doctor@latest"
 	},
 	"dependencies": {
-		"@google/genai": "^2.11.0",
 		"@tailwindcss/vite": "^4.3.2",
 		"@tanstack/react-query": "^5.101.2",
 		"@tanstack/react-virtual": "^3.14.5",
@@ -37,7 +36,6 @@
 		"@types/node": "^26.1.1",
 		"@types/react": "^19.2.17",
 		"@types/react-dom": "^19.2.3",
-		"autoprefixer": "^10.5.2",
 		"esbuild": "^0.28.1",
 		"lefthook": "^2.1.10",
 		"tailwindcss": "^4.3.2",
