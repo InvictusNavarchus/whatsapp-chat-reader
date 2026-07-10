@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -17,6 +17,9 @@ import {
 	updateChatMe,
 	updateChatStarredMessages,
 	deleteChat,
+	getChatChunk,
+	DB_CHUNK_SIZE,
+	updateChatLastOpened,
 	type ChatMetadata,
 } from './utils/db';
 
@@ -40,6 +43,9 @@ export default function App() {
 	const [starredMessageIds, setStarredMessageIds] = useState<Set<number>>(
 		new Set(),
 	);
+
+	// Loaded chunks tracking state for dynamic chunking
+	const [loadedChunks, setLoadedChunks] = useState<Set<number>>(new Set());
 
 	// Search and Scroll Navigation coordination
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -117,6 +123,14 @@ export default function App() {
 				setSenderCounts(parsedSenderCounts || {});
 				setFileName(name);
 
+				// For newly uploaded chats, all parsed messages are in memory, so mark all chunks as loaded
+				const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
+				const allLoaded = new Set<number>();
+				for (let i = 0; i < chunkCount; i++) {
+					allLoaded.add(i);
+				}
+				setLoadedChunks(allLoaded);
+
 				// Auto-save to IndexedDB
 				saveChat(
 					name,
@@ -190,6 +204,7 @@ export default function App() {
 			setJumpToIndex(null);
 			setStarredMessageIds(new Set());
 			setIsStarredOpen(false);
+			setLoadedChunks(new Set());
 			loadSavedChats(); // Refresh on back
 		}
 	};
@@ -206,37 +221,73 @@ export default function App() {
 			}
 
 			setParseProgress(30);
-			const chatData = await getChatMessages(id);
-			if (!chatData) {
-				alert('Saved chat messages not found.');
-				setIsParsing(false);
-				return;
+
+			let messagesList: Message[] = [];
+			let dateMapList: DateMapEntry[] = [];
+			const loaded = new Set<number>();
+
+			if (metadata.chunkCount) {
+				// Chunked chat: load metadata instantly, and only load the latest chunk
+				dateMapList = metadata.dateMap || [];
+
+				// Initialize sparse array
+				messagesList = new Array<Message>(metadata.messageCount);
+
+				// Load latest chunk
+				const latestChunkIndex = metadata.chunkCount - 1;
+				const latestChunk = await getChatChunk(id, latestChunkIndex);
+				if (latestChunk) {
+					const startIdx = latestChunkIndex * DB_CHUNK_SIZE;
+					for (let i = 0; i < latestChunk.length; i++) {
+						messagesList[startIdx + i] = latestChunk[i];
+					}
+				}
+				loaded.add(latestChunkIndex);
+				setParseProgress(70);
+			} else {
+				// Legacy unchunked chat: load full messages
+				const chatData = await getChatMessages(id);
+				if (!chatData) {
+					alert('Saved chat messages not found.');
+					setIsParsing(false);
+					return;
+				}
+				messagesList = chatData.messages;
+				dateMapList = chatData.dateMap;
+				setParseProgress(70);
+
+				// Migrate to chunked layout in IndexedDB
+				await saveChat(
+					metadata.fileName,
+					messagesList,
+					dateMapList,
+					metadata.participants,
+					metadata.senderCounts,
+					metadata.me,
+					id,
+					metadata.starredMessageIds,
+				);
+
+				const chunkCount = Math.ceil(messagesList.length / DB_CHUNK_SIZE);
+				for (let i = 0; i < chunkCount; i++) {
+					loaded.add(i);
+				}
 			}
 
-			setParseProgress(70);
-
-			// Update lastOpened in IndexedDB
-			await saveChat(
-				metadata.fileName,
-				chatData.messages,
-				chatData.dateMap,
-				metadata.participants,
-				metadata.senderCounts,
-				metadata.me,
-				id,
-				metadata.starredMessageIds,
-			);
+			// Update lastOpened metadata-only
+			await updateChatLastOpened(id);
 
 			setParseProgress(100);
 
-			setMessages(chatData.messages);
-			setDateMap(chatData.dateMap);
+			setMessages(messagesList);
+			setDateMap(dateMapList);
 			setParticipants(metadata.participants);
 			setSenderCounts(metadata.senderCounts);
 			setFileName(metadata.fileName);
 			setMe(metadata.me);
 			setCurrentChatId(id);
 			setStarredMessageIds(new Set(metadata.starredMessageIds || []));
+			setLoadedChunks(loaded);
 
 			setIsParsing(false);
 			setParseProgress(null);
@@ -321,6 +372,102 @@ export default function App() {
 			setIsStarredOpen(false);
 		}
 	};
+
+	// On-demand chunk loading triggered by the UI when a chunk renders
+	const handleLoadChunk = useCallback(
+		(index: number) => {
+			if (!currentChatId) return;
+
+			setLoadedChunks((prev) => {
+				if (prev.has(index)) return prev;
+
+				const next = new Set(prev);
+				next.add(index);
+
+				// Trigger fetch asynchronously to avoid state update cycles in render
+				setTimeout(() => {
+					getChatChunk(currentChatId, index)
+						.then((chunkMessages) => {
+							setMessages((messagesPrev) => {
+								if (messagesPrev.length === 0) return messagesPrev;
+								const nextMessages = [...messagesPrev];
+								const startIdx = index * DB_CHUNK_SIZE;
+								if (chunkMessages) {
+									for (let i = 0; i < chunkMessages.length; i++) {
+										nextMessages[startIdx + i] = chunkMessages[i];
+									}
+								}
+								return nextMessages;
+							});
+						})
+						.catch((err) => {
+							console.error(`Failed to load chunk ${index} on demand:`, err);
+						});
+				}, 0);
+
+				return next;
+			});
+		},
+		[currentChatId],
+	);
+
+	// Background prefetching of unloaded message chunks
+	useEffect(() => {
+		if (!currentChatId || step !== 'READER' || messages.length === 0) return;
+
+		// Find chunks that haven't been loaded yet
+		const unloadedChunkIndices: number[] = [];
+		const chunkCount = Math.ceil(messages.length / DB_CHUNK_SIZE);
+		for (let i = 0; i < chunkCount; i++) {
+			if (!loadedChunks.has(i)) {
+				unloadedChunkIndices.push(i);
+			}
+		}
+
+		if (unloadedChunkIndices.length === 0) return;
+
+		// Load the next unloaded chunk from latest to oldest
+		unloadedChunkIndices.sort((a, b) => b - a);
+		const targetChunkIndex = unloadedChunkIndices[0];
+
+		let active = true;
+		const timer = setTimeout(() => {
+			// Mark as loaded before fetching to prevent duplicate trigger
+			setLoadedChunks((prev) => {
+				if (prev.has(targetChunkIndex)) return prev;
+				const next = new Set(prev);
+				next.add(targetChunkIndex);
+				return next;
+			});
+
+			getChatChunk(currentChatId, targetChunkIndex)
+				.then((chunkMessages) => {
+					if (!active) return;
+					setMessages((prev) => {
+						if (prev.length === 0) return prev;
+						const next = [...prev];
+						const startIdx = targetChunkIndex * DB_CHUNK_SIZE;
+						if (chunkMessages) {
+							for (let i = 0; i < chunkMessages.length; i++) {
+								next[startIdx + i] = chunkMessages[i];
+							}
+						}
+						return next;
+					});
+				})
+				.catch((err) => {
+					console.error(
+						`Failed to background load chunk ${targetChunkIndex}:`,
+						err,
+					);
+				});
+		}, 150); // 150ms breathing room to keep UI extremely responsive
+
+		return () => {
+			active = false;
+			clearTimeout(timer);
+		};
+	}, [currentChatId, messages, step, loadedChunks]);
 
 	return (
 		<div className="min-h-screen bg-[#fafaf9] flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900">
@@ -482,6 +629,7 @@ export default function App() {
 										onJumpDone={() => setJumpToIndex(null)}
 										starredMessageIds={starredMessageIds}
 										onToggleStarMessage={handleToggleStarMessage}
+										onLoadChunk={handleLoadChunk}
 									/>
 
 									{/* Collapsible Slide-out Search Panel */}

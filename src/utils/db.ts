@@ -1,5 +1,7 @@
 import type { Message, DateMapEntry } from '../types';
 
+export const DB_CHUNK_SIZE = 500;
+
 export interface ChatMetadata {
 	id: string;
 	fileName: string;
@@ -9,6 +11,8 @@ export interface ChatMetadata {
 	lastOpened: number;
 	messageCount: number;
 	starredMessageIds?: number[];
+	dateMap?: DateMapEntry[];
+	chunkCount?: number;
 }
 
 export interface ChatMessages {
@@ -51,6 +55,7 @@ export async function saveChat(
 	const id = existingId || crypto.randomUUID();
 	const lastOpened = Date.now();
 	const messageCount = messages.length;
+	const chunkCount = Math.ceil(messages.length / DB_CHUNK_SIZE);
 
 	const metadata: ChatMetadata = {
 		id,
@@ -61,12 +66,8 @@ export async function saveChat(
 		lastOpened,
 		messageCount,
 		starredMessageIds: starredMessageIds || [],
-	};
-
-	const chatMessages: ChatMessages = {
-		id,
-		messages,
 		dateMap,
+		chunkCount,
 	};
 
 	return new Promise((resolve, reject) => {
@@ -81,7 +82,22 @@ export async function saveChat(
 		transaction.oncomplete = () => resolve(id);
 
 		metadataStore.put(metadata);
-		messagesStore.put(chatMessages);
+
+		// Store each chunk as a separate record in chat_messages
+		for (let i = 0; i < chunkCount; i++) {
+			const chunkMessages = messages.slice(
+				i * DB_CHUNK_SIZE,
+				(i + 1) * DB_CHUNK_SIZE,
+			);
+			messagesStore.put({
+				id: `${id}_${i}`,
+				messages: chunkMessages,
+				dateMap: [], // Empty dateMap for chunks to satisfy types
+			});
+		}
+
+		// Delete any legacy single-record message store entry
+		messagesStore.delete(id);
 	});
 }
 
@@ -98,17 +114,65 @@ export async function getChatMetadata(
 	});
 }
 
-export async function getChatMessages(
-	id: string,
-): Promise<ChatMessages | undefined> {
+export async function getChatChunk(
+	chatId: string,
+	chunkIndex: number,
+): Promise<Message[] | undefined> {
 	const db = await openDB();
 	return new Promise((resolve, reject) => {
 		const transaction = db.transaction('chat_messages', 'readonly');
 		const store = transaction.objectStore('chat_messages');
-		const request = store.get(id);
+		const request = store.get(`${chatId}_${chunkIndex}`);
 		request.onerror = () => reject(request.error);
-		request.onsuccess = () => resolve(request.result);
+		request.onsuccess = () => {
+			const result = request.result;
+			resolve(result ? result.messages : undefined);
+		};
 	});
+}
+
+export async function getChatMessages(
+	id: string,
+): Promise<ChatMessages | undefined> {
+	const db = await openDB();
+
+	// Check if legacy single-record exists
+	const legacy = await new Promise<ChatMessages | undefined>(
+		(resolve, reject) => {
+			const transaction = db.transaction('chat_messages', 'readonly');
+			const store = transaction.objectStore('chat_messages');
+			const request = store.get(id);
+			request.onerror = () => reject(request.error);
+			request.onsuccess = () => resolve(request.result);
+		},
+	);
+
+	if (legacy) {
+		return legacy;
+	}
+
+	// Otherwise, load metadata to find chunks
+	const metadata = await getChatMetadata(id);
+	if (!metadata || !metadata.chunkCount) return undefined;
+
+	const chunkPromises: Promise<Message[] | undefined>[] = [];
+	for (let i = 0; i < metadata.chunkCount; i++) {
+		chunkPromises.push(getChatChunk(id, i));
+	}
+
+	const chunks = await Promise.all(chunkPromises);
+	const messages: Message[] = [];
+	for (const chunk of chunks) {
+		if (chunk) {
+			messages.push(...chunk);
+		}
+	}
+
+	return {
+		id,
+		messages,
+		dateMap: metadata.dateMap || [],
+	};
 }
 
 export async function listChats(): Promise<ChatMetadata[]> {
@@ -181,8 +245,26 @@ export async function updateChatStarredMessages(
 	});
 }
 
+export async function updateChatLastOpened(id: string): Promise<void> {
+	const db = await openDB();
+	const metadata = await getChatMetadata(id);
+	if (!metadata) throw new Error('Chat not found');
+	metadata.lastOpened = Date.now();
+
+	return new Promise((resolve, reject) => {
+		const transaction = db.transaction('chat_metadata', 'readwrite');
+		const store = transaction.objectStore('chat_metadata');
+		const request = store.put(metadata);
+		request.onerror = () => reject(request.error);
+		request.onsuccess = () => resolve();
+	});
+}
+
 export async function deleteChat(id: string): Promise<void> {
 	const db = await openDB();
+	const metadata = await getChatMetadata(id);
+	const chunkCount = metadata?.chunkCount || 0;
+
 	return new Promise((resolve, reject) => {
 		const transaction = db.transaction(
 			['chat_metadata', 'chat_messages'],
@@ -196,5 +278,10 @@ export async function deleteChat(id: string): Promise<void> {
 
 		metadataStore.delete(id);
 		messagesStore.delete(id);
+
+		// Delete all chunks too!
+		for (let i = 0; i < chunkCount; i++) {
+			messagesStore.delete(`${id}_${i}`);
+		}
 	});
 }
