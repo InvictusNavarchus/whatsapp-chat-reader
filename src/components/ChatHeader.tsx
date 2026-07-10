@@ -8,6 +8,7 @@ import {
 	X,
 	Pencil,
 	Check,
+	Star,
 } from 'lucide-react';
 import type { Message, DateMapEntry } from '../types';
 
@@ -23,6 +24,8 @@ interface ChatHeaderProps {
 	dateMap: DateMapEntry[];
 	onRename: (newName: string) => void;
 	onChangeIdentity: () => void;
+	isStarredOpen: boolean;
+	onStarredToggle: () => void;
 }
 
 export default function ChatHeader({
@@ -37,6 +40,8 @@ export default function ChatHeader({
 	dateMap,
 	onRename,
 	onChangeIdentity,
+	isStarredOpen,
+	onStarredToggle,
 }: ChatHeaderProps) {
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 	const calendarRef = useRef<HTMLDivElement>(null);
@@ -216,6 +221,20 @@ export default function ChatHeader({
 						)}
 					</div>
 				)}
+
+				{/* Starred Messages Toggle Button */}
+				<button
+					type="button"
+					onClick={onStarredToggle}
+					className={`p-2 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
+						isStarredOpen
+							? 'text-amber-600 bg-amber-50'
+							: 'text-neutral-500 hover:text-neutral-700'
+					}`}
+					title="Starred messages"
+				>
+					<Star className="w-5 h-5" />
+				</button>
 
 				{/* Full-text Search Toggle Button */}
 				<button

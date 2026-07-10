@@ -5,6 +5,7 @@ import ParticipantSelector from './components/ParticipantSelector';
 import ChatHeader from './components/ChatHeader';
 import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
+import StarredPanel from './components/StarredPanel';
 import type { Message, DateMapEntry } from './types';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import {
@@ -14,6 +15,7 @@ import {
 	listChats,
 	renameChat,
 	updateChatMe,
+	updateChatStarredMessages,
 	deleteChat,
 	type ChatMetadata,
 } from './utils/db';
@@ -32,6 +34,12 @@ export default function App() {
 	// Saved chats state
 	const [savedChats, setSavedChats] = useState<ChatMetadata[]>([]);
 	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+	// Starred messages state
+	const [isStarredOpen, setIsStarredOpen] = useState(false);
+	const [starredMessageIds, setStarredMessageIds] = useState<Set<number>>(
+		new Set(),
+	);
 
 	// Search and Scroll Navigation coordination
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -180,6 +188,8 @@ export default function App() {
 			setIsSearchOpen(false);
 			setSearchQuery('');
 			setJumpToIndex(null);
+			setStarredMessageIds(new Set());
+			setIsStarredOpen(false);
 			loadSavedChats(); // Refresh on back
 		}
 	};
@@ -214,6 +224,7 @@ export default function App() {
 				metadata.senderCounts,
 				metadata.me,
 				id,
+				metadata.starredMessageIds,
 			);
 
 			setParseProgress(100);
@@ -225,6 +236,7 @@ export default function App() {
 			setFileName(metadata.fileName);
 			setMe(metadata.me);
 			setCurrentChatId(id);
+			setStarredMessageIds(new Set(metadata.starredMessageIds || []));
 
 			setIsParsing(false);
 			setParseProgress(null);
@@ -283,11 +295,30 @@ export default function App() {
 		}
 	};
 
+	const handleToggleStarMessage = (messageId: number) => {
+		const updated = new Set(starredMessageIds);
+		if (updated.has(messageId)) {
+			updated.delete(messageId);
+		} else {
+			updated.add(messageId);
+		}
+		setStarredMessageIds(updated);
+
+		if (currentChatId) {
+			updateChatStarredMessages(currentChatId, Array.from(updated))
+				.then(() => loadSavedChats())
+				.catch((err) =>
+					console.error('Failed to update starred messages:', err),
+				);
+		}
+	};
+
 	const handleJumpToMessage = (index: number) => {
 		setJumpToIndex(index);
 		// On mobile, close search sidebar after jumping to keep things uncluttered
 		if (window.innerWidth < 768) {
 			setIsSearchOpen(false);
+			setIsStarredOpen(false);
 		}
 	};
 
@@ -422,12 +453,20 @@ export default function App() {
 							participants={participants}
 							me={me}
 							onBack={handleBackToUpload}
-							onSearchToggle={() => setIsSearchOpen(!isSearchOpen)}
+							onSearchToggle={() => {
+								setIsSearchOpen(!isSearchOpen);
+								setIsStarredOpen(false);
+							}}
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={handleJumpToMessage}
 							dateMap={dateMap}
 							onRename={handleRenameCurrentChat}
 							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
+							isStarredOpen={isStarredOpen}
+							onStarredToggle={() => {
+								setIsStarredOpen(!isStarredOpen);
+								setIsSearchOpen(false);
+							}}
 						/>
 
 						{/* Chat Area Content Workspace */}
@@ -441,6 +480,8 @@ export default function App() {
 										searchQuery={searchQuery}
 										jumpToIndex={jumpToIndex}
 										onJumpDone={() => setJumpToIndex(null)}
+										starredMessageIds={starredMessageIds}
+										onToggleStarMessage={handleToggleStarMessage}
 									/>
 
 									{/* Collapsible Slide-out Search Panel */}
@@ -463,6 +504,31 @@ export default function App() {
 													onSearchQueryChange={setSearchQuery}
 													onSelectMatch={handleJumpToMessage}
 													onClose={() => setIsSearchOpen(false)}
+												/>
+											</motion.div>
+										)}
+									</AnimatePresence>
+
+									{/* Collapsible Slide-out Starred Messages Panel */}
+									<AnimatePresence>
+										{isStarredOpen && (
+											<motion.div
+												initial={{ x: '100%' }}
+												animate={{ x: 0 }}
+												exit={{ x: '100%' }}
+												transition={{
+													type: 'spring',
+													damping: 25,
+													stiffness: 220,
+												}}
+												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full"
+											>
+												<StarredPanel
+													messages={messages}
+													starredMessageIds={starredMessageIds}
+													onSelectMessage={handleJumpToMessage}
+													onClose={() => setIsStarredOpen(false)}
+													onToggleStar={handleToggleStarMessage}
 												/>
 											</motion.div>
 										)}

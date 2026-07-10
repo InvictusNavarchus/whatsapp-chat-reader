@@ -8,6 +8,7 @@ export interface ChatMetadata {
 	me: string | null;
 	lastOpened: number;
 	messageCount: number;
+	starredMessageIds?: number[];
 }
 
 export interface ChatMessages {
@@ -44,6 +45,7 @@ export async function saveChat(
 	senderCounts: Record<string, number>,
 	me: string | null,
 	existingId?: string,
+	starredMessageIds?: number[],
 ): Promise<string> {
 	const db = await openDB();
 	const id = existingId || crypto.randomUUID();
@@ -58,6 +60,7 @@ export async function saveChat(
 		me,
 		lastOpened,
 		messageCount,
+		starredMessageIds: starredMessageIds || [],
 	};
 
 	const chatMessages: ChatMessages = {
@@ -150,6 +153,24 @@ export async function updateChatMe(
 	const metadata = await getChatMetadata(id);
 	if (!metadata) throw new Error('Chat not found');
 	metadata.me = me;
+
+	return new Promise((resolve, reject) => {
+		const transaction = db.transaction('chat_metadata', 'readwrite');
+		const store = transaction.objectStore('chat_metadata');
+		const request = store.put(metadata);
+		request.onerror = () => reject(request.error);
+		request.onsuccess = () => resolve();
+	});
+}
+
+export async function updateChatStarredMessages(
+	id: string,
+	starredIds: number[],
+): Promise<void> {
+	const db = await openDB();
+	const metadata = await getChatMetadata(id);
+	if (!metadata) throw new Error('Chat not found');
+	metadata.starredMessageIds = starredIds;
 
 	return new Promise((resolve, reject) => {
 		const transaction = db.transaction('chat_metadata', 'readwrite');

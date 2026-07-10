@@ -8,6 +8,7 @@ import {
 	FileText,
 	Smile,
 	Info,
+	Star,
 } from 'lucide-react';
 import type { Message } from '../types';
 
@@ -17,6 +18,8 @@ interface VirtualMessageListProps {
 	searchQuery: string;
 	jumpToIndex: number | null;
 	onJumpDone: () => void;
+	starredMessageIds: Set<number>;
+	onToggleStarMessage: (id: number) => void;
 }
 
 // Escape helper for regex search highlights
@@ -133,11 +136,15 @@ const MessageBubble = memo(function MessageBubble({
 	isMe,
 	searchQuery,
 	isHighlighted,
+	isStarred,
+	onToggleStar,
 }: {
 	message: Message;
 	isMe: boolean;
 	searchQuery: string;
 	isHighlighted: boolean;
+	isStarred: boolean;
+	onToggleStar: () => void;
 }) {
 	const isSystem = message.isSystem;
 
@@ -163,7 +170,7 @@ const MessageBubble = memo(function MessageBubble({
 	return (
 		<div
 			id={`message-${message.id}`}
-			className={`w-full flex ${isMe ? 'justify-end' : 'justify-start'} transition-all`}
+			className={`w-full flex ${isMe ? 'justify-end' : 'justify-start'} transition-all group/msg`}
 		>
 			<div
 				className={`max-w-[82%] md:max-w-[72%] rounded-2xl relative shadow-sm transition-all duration-500 ${
@@ -201,9 +208,23 @@ const MessageBubble = memo(function MessageBubble({
 					)}
 
 					{/* Timestamp Footer */}
-					<span className="text-[10px] text-neutral-400 font-mono text-right mt-1 self-end leading-none select-none">
-						{message.formattedTime}
-					</span>
+					<div className="text-[10px] text-neutral-400 font-mono text-right mt-1 self-end leading-none select-none flex items-center gap-1.5 min-h-[16px]">
+						<button
+							type="button"
+							onClick={onToggleStar}
+							className={`p-0.5 rounded transition-all focus:outline-none ${
+								isStarred
+									? 'text-amber-500 hover:text-amber-600 scale-100'
+									: 'text-neutral-300 hover:text-amber-500 opacity-0 group-hover/msg:opacity-100 focus:opacity-100 hover:scale-110 cursor-pointer'
+							}`}
+							title={isStarred ? 'Unstar message' : 'Star message'}
+						>
+							<Star
+								className={`w-3.5 h-3.5 ${isStarred ? 'fill-amber-500' : ''}`}
+							/>
+						</button>
+						<span>{message.formattedTime}</span>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -216,6 +237,8 @@ export default function VirtualMessageList({
 	searchQuery,
 	jumpToIndex,
 	onJumpDone,
+	starredMessageIds,
+	onToggleStarMessage,
 }: VirtualMessageListProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -291,6 +314,7 @@ export default function VirtualMessageList({
 						const message = messages[virtualRow.index];
 						const isMe = me !== null && message.sender === me;
 						const isHighlighted = highlightedId === message.id;
+						const isStarred = starredMessageIds.has(message.id);
 
 						return (
 							<div
@@ -312,6 +336,8 @@ export default function VirtualMessageList({
 										isMe={isMe}
 										searchQuery={searchQuery}
 										isHighlighted={isHighlighted}
+										isStarred={isStarred}
+										onToggleStar={() => onToggleStarMessage(message.id)}
 									/>
 								</div>
 							</div>
