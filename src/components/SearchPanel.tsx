@@ -27,14 +27,6 @@ export default function SearchPanel({
     inputRef.current?.focus();
   }, []);
 
-  // Debounce the search query change to avoid heavy rendering during active typing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearchQueryChange(draftQuery);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [draftQuery, onSearchQueryChange]);
-
   // Compute matches based on search query (uses pre-calculated contentLower for maximum performance)
   const matches: SearchMatch[] = useMemo(() => {
     if (!searchQuery || searchQuery.trim().length < 2) return [];
@@ -65,6 +57,11 @@ export default function SearchPanel({
     setDraftQuery(e.target.value);
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearchQueryChange(draftQuery);
+  };
+
   const clearSearch = () => {
     setDraftQuery('');
     onSearchQueryChange('');
@@ -90,28 +87,36 @@ export default function SearchPanel({
 
       {/* Input area */}
       <div className="p-4 border-b border-neutral-100 shrink-0">
-        <div className="relative">
-          <input
-            type="text"
-            ref={inputRef}
-            value={draftQuery}
-            onChange={handleInputChange}
-            placeholder="Search words, phrases..."
-            className="w-full pl-9 pr-8 py-2 border border-neutral-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-neutral-400 bg-neutral-50/50"
-          />
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-400" />
-          {draftQuery && (
-            <button
-              type="button"
-              onClick={clearSearch}
-              className="absolute right-2.5 top-2.5 p-0.5 hover:bg-neutral-200 rounded-full text-neutral-400 hover:text-neutral-600 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+        <form onSubmit={handleSearchSubmit} className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              ref={inputRef}
+              value={draftQuery}
+              onChange={handleInputChange}
+              placeholder="Search words, phrases..."
+              className="w-full pl-9 pr-8 py-2 border border-neutral-200 rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all placeholder:text-neutral-400 bg-neutral-50/50"
+            />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-400" />
+            {draftQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-2.5 top-2.5 p-0.5 hover:bg-neutral-200 rounded-full text-neutral-400 hover:text-neutral-600 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-sans font-medium transition-colors cursor-pointer min-h-[40px] shrink-0"
+          >
+            Search
+          </button>
+        </form>
         <p className="text-[11px] text-neutral-400 font-sans mt-2">
-          Type at least 2 characters to search. Search is case-insensitive.
+          Type at least 2 characters and press Search. Matches are highlighted in the conversation.
         </p>
       </div>
 
