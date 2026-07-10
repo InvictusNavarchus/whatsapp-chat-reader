@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQueryClient } from '@tanstack/react-query';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
 import ChatHeader from './components/ChatHeader';
@@ -26,6 +27,8 @@ import { useStarredMessages } from './hooks/useStarredMessages';
 import { useSearchAndJump } from './hooks/useSearchAndJump';
 
 export default function App() {
+	const queryClient = useQueryClient();
+
 	// Zustand store
 	const {
 		step,
@@ -54,6 +57,8 @@ export default function App() {
 		setJumpToIndex,
 		openSearch,
 		openStarred,
+		totalMessages,
+		setTotalMessages,
 		reset: resetStore,
 	} = useChatStore();
 
@@ -61,7 +66,7 @@ export default function App() {
 	const { savedChats, loadSavedChats, deleteChat, renameChat } =
 		useChatPersistence();
 
-	const { messages, setMessages, loadedChunks, setLoadedChunks, loadChunk } =
+	const { messages, loadedChunks, setLoadedChunks, loadChunk } =
 		useChunkedMessages(currentChatId, step);
 
 	const { starredMessageIds, setStarredMessageIds, toggleStarMessage } =
@@ -85,18 +90,10 @@ export default function App() {
 		}) => {
 			const participantList = parsedParticipants || [];
 
-			setMessages(parsed);
 			setDateMap(parsedDateMap || []);
 			setParticipants(participantList);
 			setSenderCounts(parsedSenderCounts || {});
 			setFileName(name);
-
-			const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
-			const allLoaded = new Set<number>();
-			for (let i = 0; i < chunkCount; i++) {
-				allLoaded.add(i);
-			}
-			setLoadedChunks(allLoaded);
 
 			saveChat(
 				name,
@@ -108,6 +105,20 @@ export default function App() {
 			)
 				.then((id) => {
 					setCurrentChatId(id);
+					setTotalMessages(parsed.length);
+
+					// Hydrate TanStack Query cache with all chunks
+					const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
+					const allLoaded = new Set<number>();
+					for (let i = 0; i < chunkCount; i++) {
+						const chunkMessages = parsed.slice(
+							i * DB_CHUNK_SIZE,
+							(i + 1) * DB_CHUNK_SIZE,
+						);
+						queryClient.setQueryData(['chat', id, 'chunk', i], chunkMessages);
+						allLoaded.add(i);
+					}
+					setLoadedChunks(allLoaded);
 					loadSavedChats();
 				})
 				.catch((err) => {
@@ -125,15 +136,16 @@ export default function App() {
 		[
 			loadSavedChats,
 			setLoadedChunks,
-			setMessages,
 			setDateMap,
 			setParticipants,
 			setSenderCounts,
 			setFileName,
 			setCurrentChatId,
+			setTotalMessages,
 			setStep,
 			setMe,
 			setIsConversationReady,
+			queryClient,
 		],
 	);
 
@@ -164,9 +176,7 @@ export default function App() {
 			window.confirm('Are you sure you want to unload the current chat log?')
 		) {
 			resetStore();
-			setMessages([]);
 			setStarredMessageIds(new Set());
-			setLoadedChunks(new Set());
 			loadSavedChats();
 		}
 	};
@@ -184,21 +194,19 @@ export default function App() {
 
 			setParseProgress(30);
 
-			let messagesList: Message[] = [];
 			let dateMapList: DateMapEntry[] = [];
 			const loaded = new Set<number>();
 
 			if (metadata.chunkCount) {
 				dateMapList = metadata.dateMap || [];
-				messagesList = new Array<Message>(metadata.messageCount);
 
 				const latestChunkIndex = metadata.chunkCount - 1;
 				const latestChunk = await getChatChunk(id, latestChunkIndex);
 				if (latestChunk) {
-					const startIdx = latestChunkIndex * DB_CHUNK_SIZE;
-					for (let i = 0; i < latestChunk.length; i++) {
-						messagesList[startIdx + i] = latestChunk[i];
-					}
+					queryClient.setQueryData(
+						['chat', id, 'chunk', latestChunkIndex],
+						latestChunk,
+					);
 				}
 				loaded.add(latestChunkIndex);
 				setParseProgress(70);
@@ -209,7 +217,7 @@ export default function App() {
 					setIsParsing(false);
 					return;
 				}
-				messagesList = chatData.messages;
+				const messagesList = chatData.messages;
 				dateMapList = chatData.dateMap;
 				setParseProgress(70);
 
@@ -226,6 +234,11 @@ export default function App() {
 
 				const chunkCount = Math.ceil(messagesList.length / DB_CHUNK_SIZE);
 				for (let i = 0; i < chunkCount; i++) {
+					const chunkMessages = messagesList.slice(
+						i * DB_CHUNK_SIZE,
+						(i + 1) * DB_CHUNK_SIZE,
+					);
+					queryClient.setQueryData(['chat', id, 'chunk', i], chunkMessages);
 					loaded.add(i);
 				}
 			}
@@ -234,12 +247,12 @@ export default function App() {
 
 			setParseProgress(100);
 
-			setMessages(messagesList);
 			setDateMap(dateMapList);
 			setParticipants(metadata.participants);
 			setSenderCounts(metadata.senderCounts);
 			setFileName(metadata.fileName);
 			setMe(metadata.me);
+			setTotalMessages(metadata.messageCount);
 			setCurrentChatId(id);
 			setStarredMessageIds(new Set(metadata.starredMessageIds || []));
 			setLoadedChunks(loaded);

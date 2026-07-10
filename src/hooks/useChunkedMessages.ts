@@ -1,100 +1,84 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { useChatStore } from '../store/useChatStore';
 import type { Message } from '../types';
 import { getChatChunk, DB_CHUNK_SIZE } from '../utils/db';
 
 export function useChunkedMessages(chatId: string | null, step: string) {
-	const [messages, setMessages] = useState<Message[]>([]);
+	const queryClient = useQueryClient();
+	const totalMessages = useChatStore((state) => state.totalMessages);
 	const [loadedChunks, setLoadedChunks] = useState<Set<number>>(new Set());
 
-	const currentChatIdRef = useRef<string | null>(null);
-	currentChatIdRef.current = chatId;
-
-	const fetchingChunksRef = useRef<Set<number>>(new Set());
-
+	// If chatId changes, clear local loadedChunks Set
 	useEffect(() => {
-		fetchingChunksRef.current.clear();
+		setLoadedChunks(new Set());
 	}, [chatId]);
 
-	const loadChunk = useCallback(
-		(index: number) => {
-			if (!chatId) return;
+	const chunkCount = Math.ceil(totalMessages / DB_CHUNK_SIZE);
 
-			setLoadedChunks((prev) => {
-				if (prev.has(index)) return prev;
+	// Map queries for each chunk index.
+	// Only run (enable) the query if its index is inside loadedChunks.
+	const results = useQueries({
+		queries: Array.from({ length: chunkCount }, (_, i) => ({
+			queryKey: ['chat', chatId, 'chunk', i],
+			queryFn: () => getChatChunk(chatId!, i),
+			enabled: !!chatId && loadedChunks.has(i),
+			staleTime: Infinity,
+		})),
+	});
 
-				const next = new Set(prev);
-				next.add(index);
+	// Assemble the flat sparse array of messages from the query results
+	const messages = useMemo(() => {
+		if (!chatId || totalMessages === 0) return [];
+		const arr = new Array<Message>(totalMessages);
+		results.forEach((res, i) => {
+			if (res.data) {
+				const startIdx = i * DB_CHUNK_SIZE;
+				for (let j = 0; j < res.data.length; j++) {
+					arr[startIdx + j] = res.data[j];
+				}
+			}
+		});
+		return arr;
+	}, [results, chatId, totalMessages]);
 
-				const chatIdAtCallTime = chatId;
+	// Mark a chunk to be loaded
+	const loadChunk = useCallback((index: number) => {
+		setLoadedChunks((prev) => {
+			if (prev.has(index)) return prev;
+			const next = new Set(prev);
+			next.add(index);
+			return next;
+		});
+	}, []);
 
-				// Trigger fetch asynchronously to avoid state update cycles in render
-				setTimeout(() => {
-					getChatChunk(chatIdAtCallTime, index)
-						.then((chunkMessages) => {
-							if (currentChatIdRef.current !== chatIdAtCallTime) return;
-							setMessages((messagesPrev) => {
-								if (messagesPrev.length === 0) return messagesPrev;
-								const nextMessages = [...messagesPrev];
-								const startIdx = index * DB_CHUNK_SIZE;
-								if (chunkMessages) {
-									for (let i = 0; i < chunkMessages.length; i++) {
-										nextMessages[startIdx + i] = chunkMessages[i];
-									}
-								}
-								return nextMessages;
-							});
-						})
-						.catch((err) => {
-							console.error(`Failed to load chunk ${index} on demand:`, err);
-						});
-				}, 0);
-
-				return next;
-			});
-		},
-		[chatId],
-	);
-
-	// Background prefetching of unloaded message chunks
+	// Background prefetching of unloaded message chunks.
 	useEffect(() => {
-		if (!chatId || step !== 'READER' || messages.length === 0) return;
+		if (!chatId || step !== 'READER' || totalMessages === 0) return;
 
-		// Find chunks that haven't been loaded yet and are not in progress
+		// Find chunks that haven't been loaded yet (i.e. not in loadedChunks)
 		const unloadedChunkIndices: number[] = [];
-		const chunkCount = Math.ceil(messages.length / DB_CHUNK_SIZE);
 		for (let i = 0; i < chunkCount; i++) {
-			if (!loadedChunks.has(i) && !fetchingChunksRef.current.has(i)) {
+			if (!loadedChunks.has(i)) {
 				unloadedChunkIndices.push(i);
 			}
 		}
 
 		if (unloadedChunkIndices.length === 0) return;
 
-		// Load the next unloaded chunk from latest to oldest
+		// Fetch the next unloaded chunk from latest to oldest
 		unloadedChunkIndices.sort((a, b) => b - a);
 		const targetChunkIndex = unloadedChunkIndices[0];
-		const chatIdAtCallTime = chatId;
 
-		let active = true;
 		const timer = setTimeout(() => {
-			fetchingChunksRef.current.add(targetChunkIndex);
-
-			getChatChunk(chatIdAtCallTime, targetChunkIndex)
-				.then((chunkMessages) => {
-					if (!active || currentChatIdRef.current !== chatIdAtCallTime) return;
-
-					setMessages((prev) => {
-						if (prev.length === 0) return prev;
-						const next = [...prev];
-						const startIdx = targetChunkIndex * DB_CHUNK_SIZE;
-						if (chunkMessages) {
-							for (let i = 0; i < chunkMessages.length; i++) {
-								next[startIdx + i] = chunkMessages[i];
-							}
-						}
-						return next;
-					});
-
+			queryClient
+				.prefetchQuery({
+					queryKey: ['chat', chatId, 'chunk', targetChunkIndex],
+					queryFn: () => getChatChunk(chatId, targetChunkIndex),
+					staleTime: Infinity,
+				})
+				.then(() => {
+					// Once cached, enable it in our loadedChunks set to merge into the messages list
 					setLoadedChunks((prev) => {
 						if (prev.has(targetChunkIndex)) return prev;
 						const next = new Set(prev);
@@ -104,24 +88,19 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 				})
 				.catch((err) => {
 					console.error(
-						`Failed to background load chunk ${targetChunkIndex}:`,
+						`Failed to background prefetch chunk ${targetChunkIndex}:`,
 						err,
 					);
-				})
-				.finally(() => {
-					fetchingChunksRef.current.delete(targetChunkIndex);
 				});
 		}, 150); // 150ms breathing room to keep UI extremely responsive
 
 		return () => {
-			active = false;
 			clearTimeout(timer);
 		};
-	}, [chatId, messages, step, loadedChunks]);
+	}, [chatId, step, totalMessages, loadedChunks, chunkCount, queryClient]);
 
 	return {
 		messages,
-		setMessages,
 		loadedChunks,
 		setLoadedChunks,
 		loadChunk,
