@@ -470,7 +470,7 @@ export default function App() {
 						/>
 
 						{/* Chat Area Content Workspace */}
-						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-center">
+						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">
 							{isConversationReady ? (
 								<>
 									{/* Main Scrolling Viewer */}
