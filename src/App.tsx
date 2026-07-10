@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -12,176 +12,125 @@ import {
 	saveChat,
 	getChatMetadata,
 	getChatMessages,
-	listChats,
-	renameChat,
 	updateChatMe,
-	updateChatStarredMessages,
-	deleteChat,
+	updateChatLastOpened,
 	getChatChunk,
 	DB_CHUNK_SIZE,
-	updateChatLastOpened,
-	type ChatMetadata,
 } from './utils/db';
+
+import { useChatParser } from './hooks/useChatParser';
+import { useChatPersistence } from './hooks/useChatPersistence';
+import { useChunkedMessages } from './hooks/useChunkedMessages';
+import { useStarredMessages } from './hooks/useStarredMessages';
+import { useSearchAndJump } from './hooks/useSearchAndJump';
 
 type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
 
 export default function App() {
 	const [step, setStep] = useState<AppStep>('UPLOAD');
-	const [messages, setMessages] = useState<Message[]>([]);
 	const [dateMap, setDateMap] = useState<DateMapEntry[]>([]);
 	const [fileName, setFileName] = useState<string>('');
 	const [participants, setParticipants] = useState<string[]>([]);
 	const [senderCounts, setSenderCounts] = useState<Record<string, number>>({});
 	const [me, setMe] = useState<string | null>(null);
 
-	// Saved chats state
-	const [savedChats, setSavedChats] = useState<ChatMetadata[]>([]);
 	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
-	// Starred messages state
-	const [isStarredOpen, setIsStarredOpen] = useState(false);
-	const [starredMessageIds, setStarredMessageIds] = useState<Set<number>>(
-		new Set(),
-	);
-
-	// Loaded chunks tracking state for dynamic chunking
-	const [loadedChunks, setLoadedChunks] = useState<Set<number>>(new Set());
-
-	const currentChatIdRef = useRef<string | null>(null);
-	currentChatIdRef.current = currentChatId;
-
-	const fetchingChunksRef = useRef<Set<number>>(new Set());
-
-	useEffect(() => {
-		fetchingChunksRef.current.clear();
-	}, [currentChatId]);
-
-	// Search and Scroll Navigation coordination
-	const [isSearchOpen, setIsSearchOpen] = useState(false);
-	const [searchQuery, setSearchQuery] = useState('');
-	const [jumpToIndex, setJumpToIndex] = useState<number | null>(null);
-
-	// Background parsing states
-	const [isParsing, setIsParsing] = useState(false);
-	const [parseProgress, setParseProgress] = useState<number | null>(null);
 
 	// Defer mounting heavy VirtualMessageList to let loading view paint first
 	const [isConversationReady, setIsConversationReady] = useState(false);
 
-	const loadSavedChats = () => {
-		listChats()
-			.then(setSavedChats)
-			.catch((err) => console.error('Failed to load saved chats:', err));
-	};
+	// Custom hooks
+	const { savedChats, loadSavedChats, deleteChat, renameChat } =
+		useChatPersistence();
 
-	useEffect(() => {
-		loadSavedChats();
+	const { messages, setMessages, loadedChunks, setLoadedChunks, loadChunk } =
+		useChunkedMessages(currentChatId, step);
+
+	const {
+		isStarredOpen,
+		setIsStarredOpen,
+		starredMessageIds,
+		setStarredMessageIds,
+		toggleStarMessage,
+	} = useStarredMessages(currentChatId, loadSavedChats);
+
+	const {
+		isSearchOpen,
+		setIsSearchOpen,
+		searchQuery,
+		setSearchQuery,
+		jumpToIndex,
+		setJumpToIndex,
+		jumpToMessage,
+	} = useSearchAndJump(() => setIsStarredOpen(false));
+
+	const handleParseComplete = useCallback(
+		({
+			messages: parsed,
+			dateMap: parsedDateMap,
+			participants: parsedParticipants,
+			senderCounts: parsedSenderCounts,
+			fileName: name,
+		}: {
+			messages: Message[];
+			dateMap: DateMapEntry[];
+			participants: string[];
+			senderCounts: Record<string, number>;
+			fileName: string;
+		}) => {
+			const participantList = parsedParticipants || [];
+
+			setMessages(parsed);
+			setDateMap(parsedDateMap || []);
+			setParticipants(participantList);
+			setSenderCounts(parsedSenderCounts || {});
+			setFileName(name);
+
+			// For newly uploaded chats, all parsed messages are in memory, so mark all chunks as loaded
+			const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
+			const allLoaded = new Set<number>();
+			for (let i = 0; i < chunkCount; i++) {
+				allLoaded.add(i);
+			}
+			setLoadedChunks(allLoaded);
+
+			// Auto-save to IndexedDB
+			saveChat(
+				name,
+				parsed,
+				parsedDateMap || [],
+				participantList,
+				parsedSenderCounts || {},
+				null,
+			)
+				.then((id) => {
+					setCurrentChatId(id);
+					loadSavedChats();
+				})
+				.catch((err) => {
+					console.error('Failed to auto-save chat:', err);
+				});
+
+			if (participantList.length > 0) {
+				setStep('SELECT_IDENTITY');
+			} else {
+				setMe(null);
+				setIsConversationReady(false);
+				setStep('READER');
+			}
+		},
+		[loadSavedChats, setLoadedChunks, setMessages],
+	);
+
+	const handleParseError = useCallback((err: string) => {
+		alert(err);
 	}, []);
 
-	const handleChatLoaded = (text: string, name: string) => {
-		setIsParsing(true);
-		setParseProgress(0);
-
-		const worker = new Worker(
-			new URL('./utils/parser.worker.ts', import.meta.url),
-			{ type: 'module' },
-		);
-
-		worker.postMessage({ text });
-
-		worker.onmessage = (
-			e: MessageEvent<{
-				type: 'progress' | 'complete' | 'error';
-				progress?: number;
-				messages?: Message[];
-				dateMap?: DateMapEntry[];
-				participants?: string[];
-				senderCounts?: Record<string, number>;
-				error?: string;
-			}>,
-		) => {
-			const {
-				type,
-				progress,
-				messages: parsed,
-				dateMap: parsedDateMap,
-				participants: parsedParticipants,
-				senderCounts: parsedSenderCounts,
-				error,
-			} = e.data;
-
-			if (type === 'progress' && typeof progress === 'number') {
-				setParseProgress(progress);
-			} else if (type === 'complete' && parsed) {
-				worker.terminate();
-				setIsParsing(false);
-				setParseProgress(null);
-
-				if (parsed.length === 0) {
-					alert(
-						'Unable to extract any messages. Please check if this is a standard WhatsApp chat log export.',
-					);
-					return;
-				}
-
-				const participantList = parsedParticipants || [];
-
-				setMessages(parsed);
-				setDateMap(parsedDateMap || []);
-				setParticipants(participantList);
-				setSenderCounts(parsedSenderCounts || {});
-				setFileName(name);
-
-				// For newly uploaded chats, all parsed messages are in memory, so mark all chunks as loaded
-				const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
-				const allLoaded = new Set<number>();
-				for (let i = 0; i < chunkCount; i++) {
-					allLoaded.add(i);
-				}
-				setLoadedChunks(allLoaded);
-
-				// Auto-save to IndexedDB
-				saveChat(
-					name,
-					parsed,
-					parsedDateMap || [],
-					participantList,
-					parsedSenderCounts || {},
-					null,
-				)
-					.then((id) => {
-						setCurrentChatId(id);
-						loadSavedChats();
-					})
-					.catch((err) => {
-						console.error('Failed to auto-save chat:', err);
-					});
-
-				// If there are clear participants, let the user pick their own identity,
-				// otherwise jump straight to the reader view.
-				if (participantList.length > 0) {
-					setStep('SELECT_IDENTITY');
-				} else {
-					setMe(null);
-					setIsConversationReady(false);
-					setStep('READER');
-				}
-			} else if (type === 'error') {
-				worker.terminate();
-				setIsParsing(false);
-				setParseProgress(null);
-				alert(`Failed to parse chat log: ${error}`);
-			}
-		};
-
-		worker.onerror = (err) => {
-			console.error('Worker error:', err);
-			worker.terminate();
-			setIsParsing(false);
-			setParseProgress(null);
-			alert('An error occurred in the parser background thread.');
-		};
-	};
+	const { parse, isParsing, setIsParsing, parseProgress, setParseProgress } =
+		useChatParser({
+			onComplete: handleParseComplete,
+			onError: handleParseError,
+		});
 
 	const handleIdentitySelected = (name: string | null) => {
 		setMe(name);
@@ -236,13 +185,9 @@ export default function App() {
 			const loaded = new Set<number>();
 
 			if (metadata.chunkCount) {
-				// Chunked chat: load metadata instantly, and only load the latest chunk
 				dateMapList = metadata.dateMap || [];
-
-				// Initialize sparse array
 				messagesList = new Array<Message>(metadata.messageCount);
 
-				// Load latest chunk
 				const latestChunkIndex = metadata.chunkCount - 1;
 				const latestChunk = await getChatChunk(id, latestChunkIndex);
 				if (latestChunk) {
@@ -254,7 +199,6 @@ export default function App() {
 				loaded.add(latestChunkIndex);
 				setParseProgress(70);
 			} else {
-				// Legacy unchunked chat: load full messages
 				const chatData = await getChatMessages(id);
 				if (!chatData) {
 					alert('Saved chat messages not found.');
@@ -265,7 +209,6 @@ export default function App() {
 				dateMapList = chatData.dateMap;
 				setParseProgress(70);
 
-				// Migrate to chunked layout in IndexedDB
 				await saveChat(
 					metadata.fileName,
 					messagesList,
@@ -283,7 +226,6 @@ export default function App() {
 				}
 			}
 
-			// Update lastOpened metadata-only
 			await updateChatLastOpened(id);
 
 			setParseProgress(100);
@@ -301,7 +243,6 @@ export default function App() {
 			setIsParsing(false);
 			setParseProgress(null);
 
-			// If me is set, skip SELECT_IDENTITY and go straight to READER
 			if (metadata.me) {
 				setIsConversationReady(false);
 				setStep('READER');
@@ -320,172 +261,12 @@ export default function App() {
 		}
 	};
 
-	const handleDeleteSavedChat = async (id: string) => {
-		if (
-			window.confirm(
-				'Are you sure you want to permanently delete this saved chat log?',
-			)
-		) {
-			try {
-				await deleteChat(id);
-				loadSavedChats();
-			} catch (err) {
-				console.error('Failed to delete saved chat:', err);
-				alert('Failed to delete saved chat.');
-			}
-		}
-	};
-
-	const handleRenameSavedChat = async (id: string, newName: string) => {
-		try {
-			await renameChat(id, newName);
-			loadSavedChats();
-		} catch (err) {
-			console.error('Failed to rename saved chat:', err);
-			alert('Failed to rename saved chat.');
-		}
-	};
-
 	const handleRenameCurrentChat = (newName: string) => {
 		setFileName(newName);
 		if (currentChatId) {
-			renameChat(currentChatId, newName)
-				.then(() => loadSavedChats())
-				.catch((err) => console.error('Failed to rename current chat:', err));
+			renameChat(currentChatId, newName);
 		}
 	};
-
-	const handleToggleStarMessage = (messageId: number) => {
-		const updated = new Set(starredMessageIds);
-		if (updated.has(messageId)) {
-			updated.delete(messageId);
-		} else {
-			updated.add(messageId);
-		}
-		setStarredMessageIds(updated);
-
-		if (currentChatId) {
-			updateChatStarredMessages(currentChatId, Array.from(updated))
-				.then(() => loadSavedChats())
-				.catch((err) =>
-					console.error('Failed to update starred messages:', err),
-				);
-		}
-	};
-
-	const handleJumpToMessage = (index: number) => {
-		setJumpToIndex(index);
-		// On mobile, close search sidebar after jumping to keep things uncluttered
-		if (window.innerWidth < 768) {
-			setIsSearchOpen(false);
-			setIsStarredOpen(false);
-		}
-	};
-
-	// On-demand chunk loading triggered by the UI when a chunk renders
-	const handleLoadChunk = useCallback(
-		(index: number) => {
-			if (!currentChatId) return;
-
-			setLoadedChunks((prev) => {
-				if (prev.has(index)) return prev;
-
-				const next = new Set(prev);
-				next.add(index);
-
-				const chatIdAtCallTime = currentChatId;
-
-				// Trigger fetch asynchronously to avoid state update cycles in render
-				setTimeout(() => {
-					getChatChunk(chatIdAtCallTime, index)
-						.then((chunkMessages) => {
-							if (currentChatIdRef.current !== chatIdAtCallTime) return;
-							setMessages((messagesPrev) => {
-								if (messagesPrev.length === 0) return messagesPrev;
-								const nextMessages = [...messagesPrev];
-								const startIdx = index * DB_CHUNK_SIZE;
-								if (chunkMessages) {
-									for (let i = 0; i < chunkMessages.length; i++) {
-										nextMessages[startIdx + i] = chunkMessages[i];
-									}
-								}
-								return nextMessages;
-							});
-						})
-						.catch((err) => {
-							console.error(`Failed to load chunk ${index} on demand:`, err);
-						});
-				}, 0);
-
-				return next;
-			});
-		},
-		[currentChatId],
-	);
-
-	// Background prefetching of unloaded message chunks
-	useEffect(() => {
-		if (!currentChatId || step !== 'READER' || messages.length === 0) return;
-
-		// Find chunks that haven't been loaded yet and are not in progress
-		const unloadedChunkIndices: number[] = [];
-		const chunkCount = Math.ceil(messages.length / DB_CHUNK_SIZE);
-		for (let i = 0; i < chunkCount; i++) {
-			if (!loadedChunks.has(i) && !fetchingChunksRef.current.has(i)) {
-				unloadedChunkIndices.push(i);
-			}
-		}
-
-		if (unloadedChunkIndices.length === 0) return;
-
-		// Load the next unloaded chunk from latest to oldest
-		unloadedChunkIndices.sort((a, b) => b - a);
-		const targetChunkIndex = unloadedChunkIndices[0];
-		const chatIdAtCallTime = currentChatId;
-
-		let active = true;
-		const timer = setTimeout(() => {
-			fetchingChunksRef.current.add(targetChunkIndex);
-
-			getChatChunk(chatIdAtCallTime, targetChunkIndex)
-				.then((chunkMessages) => {
-					if (!active || currentChatIdRef.current !== chatIdAtCallTime) return;
-
-					setMessages((prev) => {
-						if (prev.length === 0) return prev;
-						const next = [...prev];
-						const startIdx = targetChunkIndex * DB_CHUNK_SIZE;
-						if (chunkMessages) {
-							for (let i = 0; i < chunkMessages.length; i++) {
-								next[startIdx + i] = chunkMessages[i];
-							}
-						}
-						return next;
-					});
-
-					setLoadedChunks((prev) => {
-						if (prev.has(targetChunkIndex)) return prev;
-						const next = new Set(prev);
-						next.add(targetChunkIndex);
-						return next;
-					});
-				})
-				.catch((err) => {
-					console.error(
-						`Failed to background load chunk ${targetChunkIndex}:`,
-						err,
-					);
-				})
-				.finally(() => {
-					fetchingChunksRef.current.delete(targetChunkIndex);
-				});
-		}, 150); // 150ms breathing room to keep UI extremely responsive
-
-		return () => {
-			active = false;
-			clearTimeout(timer);
-		};
-	}, [currentChatId, messages, step, loadedChunks]);
 
 	return (
 		<div className="min-h-screen bg-[#fafaf9] flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900">
@@ -500,11 +281,9 @@ export default function App() {
 						className="flex-1 flex flex-col justify-center items-center py-12 px-4 max-w-xl mx-auto w-full"
 					>
 						<div className="w-full bg-white rounded-2xl border border-neutral-200/60 p-8 md:p-12 text-center shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-							{/* Pulse decoration background */}
 							<div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-50 rounded-full blur-3xl opacity-70 pointer-events-none" />
 							<div className="absolute -left-10 -bottom-10 w-40 h-40 bg-teal-50 rounded-full blur-3xl opacity-70 pointer-events-none" />
 
-							{/* Icon and Loading indicator */}
 							<div className="relative mb-6">
 								<div className="p-4 bg-emerald-50 text-emerald-600 rounded-full inline-flex relative z-10 animate-pulse">
 									<Loader2 className="w-8 h-8 animate-spin" />
@@ -512,7 +291,6 @@ export default function App() {
 								<div className="absolute inset-0 bg-emerald-100 rounded-full blur-md opacity-50 scale-125" />
 							</div>
 
-							{/* Text Status */}
 							<h2 className="font-display text-2xl font-semibold text-neutral-900 mb-2">
 								Analyzing Chat Log
 							</h2>
@@ -531,7 +309,6 @@ export default function App() {
 								{parseProgress === 100 && 'Finalizing chat database...'}
 							</p>
 
-							{/* Progress Bar */}
 							<div className="w-full max-w-md mb-3">
 								<div className="flex justify-between items-center mb-2">
 									<span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider font-sans">
@@ -551,7 +328,6 @@ export default function App() {
 								</div>
 							</div>
 
-							{/* Security Badge */}
 							<div className="mt-8 pt-6 border-t border-neutral-100 w-full flex items-center justify-center gap-2 text-xs text-neutral-400 font-sans">
 								<ShieldCheck className="w-4 h-4 text-emerald-500" />
 								<span>Parsed 100% offline & secure in your browser.</span>
@@ -570,11 +346,11 @@ export default function App() {
 						className="flex-1 flex flex-col justify-center py-6"
 					>
 						<FileUploader
-							onChatLoaded={handleChatLoaded}
+							onChatLoaded={parse}
 							savedChats={savedChats}
 							onLoadSavedChat={handleLoadSavedChat}
-							onDeleteSavedChat={handleDeleteSavedChat}
-							onRenameSavedChat={handleRenameSavedChat}
+							onDeleteSavedChat={deleteChat}
+							onRenameSavedChat={renameChat}
 						/>
 					</motion.div>
 				)}
@@ -611,7 +387,6 @@ export default function App() {
 						}}
 						className="flex-1 flex flex-col h-screen overflow-hidden"
 					>
-						{/* Header Area */}
 						<ChatHeader
 							fileName={fileName}
 							messages={messages}
@@ -623,7 +398,7 @@ export default function App() {
 								setIsStarredOpen(false);
 							}}
 							isSearchOpen={isSearchOpen}
-							onJumpToMessage={handleJumpToMessage}
+							onJumpToMessage={jumpToMessage}
 							dateMap={dateMap}
 							onRename={handleRenameCurrentChat}
 							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
@@ -634,11 +409,9 @@ export default function App() {
 							}}
 						/>
 
-						{/* Chat Area Content Workspace */}
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">
 							{isConversationReady ? (
 								<>
-									{/* Main Scrolling Viewer */}
 									<VirtualMessageList
 										messages={messages}
 										me={me}
@@ -646,11 +419,10 @@ export default function App() {
 										jumpToIndex={jumpToIndex}
 										onJumpDone={() => setJumpToIndex(null)}
 										starredMessageIds={starredMessageIds}
-										onToggleStarMessage={handleToggleStarMessage}
-										onLoadChunk={handleLoadChunk}
+										onToggleStarMessage={toggleStarMessage}
+										onLoadChunk={loadChunk}
 									/>
 
-									{/* Collapsible Side Panel (Search / Starred Messages) */}
 									<AnimatePresence>
 										{(isSearchOpen || isStarredOpen) && (
 											<motion.div
@@ -679,7 +451,7 @@ export default function App() {
 																messages={messages}
 																searchQuery={searchQuery}
 																onSearchQueryChange={setSearchQuery}
-																onSelectMatch={handleJumpToMessage}
+																onSelectMatch={jumpToMessage}
 																onClose={() => setIsSearchOpen(false)}
 															/>
 														</motion.div>
@@ -695,9 +467,9 @@ export default function App() {
 															<StarredPanel
 																messages={messages}
 																starredMessageIds={starredMessageIds}
-																onSelectMessage={handleJumpToMessage}
+																onSelectMessage={jumpToMessage}
 																onClose={() => setIsStarredOpen(false)}
-																onToggleStar={handleToggleStarMessage}
+																onToggleStar={toggleStarMessage}
 															/>
 														</motion.div>
 													)}
