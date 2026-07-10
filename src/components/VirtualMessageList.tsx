@@ -261,24 +261,53 @@ export default function VirtualMessageList({
 		setShowScrollBottom(isUp);
 	};
 
-	// Jump to message logic using built-in scrollToIndex
+	// Jump to message logic using built-in scrollToIndex and DOM scrollIntoView fallback
 	useEffect(() => {
 		if (jumpToIndex !== null) {
+			const targetMessage = messages[jumpToIndex];
+			if (!targetMessage) return;
+
+			console.log(
+				'Jumping to index:',
+				jumpToIndex,
+				'Message ID:',
+				targetMessage.id,
+			);
+			console.log('Scroll container:', parentRef.current);
+
 			// 1. Scroll immediately to estimated position
 			rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+
+			// Fallback: If element is already in DOM, scroll it into view immediately
+			const initialEl = document.getElementById(`message-${targetMessage.id}`);
+			if (initialEl) {
+				console.log('Scrolling to initial element in DOM');
+				initialEl.scrollIntoView({ block: 'center' });
+			}
 
 			// 2. Scroll in next frame (before paint)
 			const rafId = requestAnimationFrame(() => {
 				rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+				const rafEl = document.getElementById(`message-${targetMessage.id}`);
+				if (rafEl) {
+					rafEl.scrollIntoView({ block: 'center' });
+				}
 			});
 
-			// 3. Scroll after paint & layout completes (50ms) to adjust for dynamic height measurements
+			// 3. Scroll after paint & layout completes (50ms)
 			const timeoutId = setTimeout(() => {
 				rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+				const timeoutEl = document.getElementById(
+					`message-${targetMessage.id}`,
+				);
+				if (timeoutEl) {
+					console.log('Scrolling to timeout element in DOM');
+					timeoutEl.scrollIntoView({ block: 'center' });
+				}
 			}, 50);
 
 			// Trigger the flash animation on the selected message
-			setHighlightedId(messages[jumpToIndex].id);
+			setHighlightedId(targetMessage.id);
 			const flashTimer = setTimeout(() => {
 				setHighlightedId(null);
 			}, 3000);
