@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
-import { updateChatStarredMessages } from '../utils/db';
+import { updateChatMetadata } from '../utils/db';
 
 export function useStarredMessages(
 	chatId: string | null,
@@ -23,7 +23,7 @@ export function useStarredMessages(
 				}
 
 				if (chatId) {
-					updateChatStarredMessages(chatId, Array.from(updated))
+					updateChatMetadata(chatId, { starredMessageIds: Array.from(updated) })
 						.then(() => {
 							if (onSaveSuccess) onSaveSuccess();
 						})

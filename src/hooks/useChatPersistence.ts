@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	listChats,
 	deleteChat as dbDeleteChat,
-	renameChat as dbRenameChat,
+	updateChatMetadata,
 } from '../utils/db';
 
 export function useChatPersistence() {
@@ -27,7 +27,7 @@ export function useChatPersistence() {
 
 	const renameMutation = useMutation({
 		mutationFn: ({ id, newName }: { id: string; newName: string }) =>
-			dbRenameChat(id, newName),
+			updateChatMetadata(id, { fileName: newName }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['savedChats'] });
 		},

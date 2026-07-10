@@ -13,8 +13,7 @@ import {
 	saveChat,
 	getChatMetadata,
 	getChatMessages,
-	updateChatMe,
-	updateChatLastOpened,
+	updateChatMetadata,
 	getChatChunk,
 	DB_CHUNK_SIZE,
 } from './utils/db';
@@ -165,7 +164,7 @@ export default function App() {
 		setStep('READER');
 
 		if (currentChatId) {
-			updateChatMe(currentChatId, name)
+			updateChatMetadata(currentChatId, { me: name })
 				.then(() => loadSavedChats())
 				.catch((err) => console.error('Failed to update me identity:', err));
 		}
@@ -243,7 +242,7 @@ export default function App() {
 				}
 			}
 
-			await updateChatLastOpened(id);
+			await updateChatMetadata(id, { lastOpened: Date.now() });
 
 			setParseProgress(100);
 
