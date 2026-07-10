@@ -87,10 +87,21 @@ $effect(() => {
 
 // Svelte action to measure elements
 function measureElement(node: HTMLElement, index: number) {
-	$virtualizer.measureElement(node);
+	node.setAttribute('data-index', String(index));
+	let rafId = requestAnimationFrame(() => {
+		$virtualizer.measureElement(node);
+	});
+
 	return {
 		update(newIndex: number) {
-			$virtualizer.measureElement(node);
+			node.setAttribute('data-index', String(newIndex));
+			cancelAnimationFrame(rafId);
+			rafId = requestAnimationFrame(() => {
+				$virtualizer.measureElement(node);
+			});
+		},
+		destroy() {
+			cancelAnimationFrame(rafId);
 		},
 	};
 }
