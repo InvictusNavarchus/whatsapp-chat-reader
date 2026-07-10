@@ -23,9 +23,12 @@ export default function SearchPanel({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [draftQuery, setDraftQuery] = useState(searchQuery);
 
-	// Focus search input on mount
+	// Focus search input on mount after animation begins to prevent browser layout shifts
 	useEffect(() => {
-		inputRef.current?.focus();
+		const timer = setTimeout(() => {
+			inputRef.current?.focus({ preventScroll: true });
+		}, 150);
+		return () => clearTimeout(timer);
 	}, []);
 
 	// Compute matches based on search query (uses pre-calculated contentLower for maximum performance)
@@ -66,7 +69,7 @@ export default function SearchPanel({
 	const clearSearch = () => {
 		setDraftQuery('');
 		onSearchQueryChange('');
-		inputRef.current?.focus();
+		inputRef.current?.focus({ preventScroll: true });
 	};
 
 	return (
