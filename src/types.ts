@@ -8,6 +8,8 @@ export interface Message {
   isSystem: boolean;
   isAttachment: boolean;
   attachmentType: 'image' | 'video' | 'audio' | 'document' | 'sticker' | null;
+  formattedTime: string;
+  formattedDateShort: string;
 }
 
 export interface ChatStats {

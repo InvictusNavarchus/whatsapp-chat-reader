@@ -91,6 +91,36 @@ function parseDate(dateStr: string, timeStr: string, isDDMM: boolean): Date | nu
   }
 }
 
+function finalizeMessage(msg: Message): Message {
+  msg.contentLower = msg.content.toLowerCase();
+  
+  if (msg.timestamp) {
+    try {
+      msg.formattedTime = msg.timestamp.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      msg.formattedDateShort = msg.timestamp.toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (e) {
+      msg.formattedTime = '';
+      msg.formattedDateShort = '';
+    }
+  } else if (msg.rawTimestamp) {
+    const parts = msg.rawTimestamp.split(',');
+    msg.formattedTime = parts[1]?.trim() || msg.rawTimestamp;
+    msg.formattedDateShort = parts[0]?.trim() || '';
+  } else {
+    msg.formattedTime = '';
+    msg.formattedDateShort = '';
+  }
+  
+  return msg;
+}
+
 /**
  * Parses the full WhatsApp export text content into an array of Message objects.
  */
@@ -119,10 +149,9 @@ export function parseWhatsAppChat(text: string): Message[] {
       : null;
 
     if (match) {
-      // Save the previous message if exists, computing contentLower once
+      // Save the previous message if exists, finalizing it once
       if (currentMessage) {
-        currentMessage.contentLower = currentMessage.content.toLowerCase();
-        messages.push(currentMessage);
+        messages.push(finalizeMessage(currentMessage));
       }
 
       const rawDate = match[1];
@@ -201,6 +230,8 @@ export function parseWhatsAppChat(text: string): Message[] {
         isSystem,
         isAttachment,
         attachmentType,
+        formattedTime: '',
+        formattedDateShort: '',
       };
     } else {
       // It's a multiline continuation of the current message
@@ -218,6 +249,8 @@ export function parseWhatsAppChat(text: string): Message[] {
           isSystem: true,
           isAttachment: false,
           attachmentType: null,
+          formattedTime: '',
+          formattedDateShort: '',
         };
       }
     }
@@ -225,8 +258,7 @@ export function parseWhatsAppChat(text: string): Message[] {
 
   // Add the last message
   if (currentMessage) {
-    currentMessage.contentLower = currentMessage.content.toLowerCase();
-    messages.push(currentMessage);
+    messages.push(finalizeMessage(currentMessage));
   }
 
   return messages;

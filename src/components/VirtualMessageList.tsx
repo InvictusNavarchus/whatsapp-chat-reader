@@ -103,19 +103,30 @@ function MediaAttachment({ type, content }: { type: Message['attachmentType']; c
 /**
  * Estimates the height of a message bubble. This ensures the virtual scrollbar matches
  * the overall size, regardless of what index is in the viewport.
- * Optimized to be extremely fast and completely independent of window width so it computes
- * EXACTLY ONCE per loaded file and never triggers during search panel opening/closing.
+ * Account for the container width to be extremely precise and avoid height drift.
  */
-function estimateHeight(message: Message): number {
+function estimateHeight(message: Message, containerWidth: number): number {
   if (message.isSystem) {
     const textLength = message.content.length;
-    const lines = Math.max(1, Math.ceil(textLength / 45));
+    // System messages are centered and span up to 85% of container width
+    const maxSysWidth = Math.max(200, Math.min(containerWidth, 896) * 0.85 - 30);
+    const charsPerLine = Math.max(25, Math.floor(maxSysWidth / 7.5));
+    const lines = Math.max(1, Math.ceil(textLength / charsPerLine));
     return lines * 20 + 24; // 20px per line + 24px vertical padding
   }
 
   const textLength = message.content.length;
-  // A standard chat bubble line on mobile holds roughly 55-60 characters
-  const estimatedLines = Math.max(1, Math.ceil(textLength / 55));
+  // Width of chat bubble area
+  const bubbleWidth = Math.max(200, Math.min(containerWidth, 896) * 0.75 - 40);
+  const avgCharWidth = 8.0;
+  const charsPerLine = Math.max(20, Math.floor(bubbleWidth / avgCharWidth));
+
+  // Handle multi-line messages accurately
+  const paragraphs = message.content.split('\n');
+  let estimatedLines = 0;
+  for (const p of paragraphs) {
+    estimatedLines += Math.max(1, Math.ceil(p.length / charsPerLine));
+  }
 
   // Header sender name height
   const headerHeight = message.sender && message.sender !== 'System' ? 18 : 0;
@@ -131,6 +142,86 @@ function estimateHeight(message: Message): number {
   return textHeight + headerHeight + footerHeight + mediaHeight + verticalSpacing;
 }
 
+// Memoized message bubble to prevent unneeded re-renders on scroll or search
+const MessageBubble = React.memo(function MessageBubble({
+  message,
+  isMe,
+  searchQuery,
+  isHighlighted,
+}: {
+  message: Message;
+  isMe: boolean;
+  searchQuery: string;
+  isHighlighted: boolean;
+}) {
+  const isSystem = message.isSystem;
+
+  if (isSystem) {
+    return (
+      <div
+        className="w-full flex justify-center my-1.5 focus:outline-none"
+        id={`message-${message.id}`}
+      >
+        <div className="max-w-[85%] bg-white/70 border border-neutral-100 text-neutral-500 font-sans text-[11px] md:text-xs py-1 px-3 rounded-lg shadow-sm text-center flex items-center gap-1.5 leading-relaxed">
+          <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+          <span>{message.content}</span>
+          {message.formattedTime && (
+            <span className="text-[9px] text-neutral-400 font-mono shrink-0 ml-1">
+              ({message.formattedTime})
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id={`message-${message.id}`}
+      className={`w-full flex ${isMe ? 'justify-end' : 'justify-start'} transition-all`}
+    >
+      <div
+        className={`max-w-[82%] md:max-w-[72%] rounded-2xl relative shadow-sm transition-all duration-500 ${
+          isMe
+            ? 'bg-[#d9fdd3] border border-[#d1f4cb] text-[#111b21] rounded-tr-none'
+            : 'bg-white border border-neutral-100 text-[#111b21] rounded-tl-none'
+        } ${
+          isHighlighted
+            ? 'ring-4 ring-amber-400 scale-[1.01] shadow-md z-10'
+            : ''
+        }`}
+      >
+        <div className="px-3.5 py-2 flex flex-col">
+          {/* Participant Name Header */}
+          {!isMe && (
+            <span
+              className="font-sans font-semibold text-[12px] md:text-xs mb-0.5 truncate"
+              style={{ color: getSenderColor(message.sender) }}
+            >
+              {message.sender}
+            </span>
+          )}
+
+          {/* Attachment Container */}
+          {message.isAttachment ? (
+            <MediaAttachment type={message.attachmentType} content={message.content} />
+          ) : (
+            /* Text Message Content */
+            <p className="font-sans text-[14px] md:text-base leading-[1.4] tracking-normal break-words pr-8">
+              <HighlightedText text={message.content} search={searchQuery} />
+            </p>
+          )}
+
+          {/* Timestamp Footer */}
+          <span className="text-[10px] text-neutral-400 font-mono text-right mt-1 self-end leading-none select-none">
+            {message.formattedTime}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function VirtualMessageList({
   messages,
   me,
@@ -144,38 +235,56 @@ export default function VirtualMessageList({
   const [containerWidth, setContainerWidth] = useState(375);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Recalculate container dimensions
+  // Recalculate container dimensions with a small debounce to avoid spamming layout/state changes
   useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout | null = null;
+
     const handleResize = () => {
-      if (containerRef.current) {
-        setViewportHeight(containerRef.current.clientHeight);
-        setContainerWidth(containerRef.current.clientWidth);
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
       }
+      
+      resizeTimeout = setTimeout(() => {
+        if (containerRef.current) {
+          setViewportHeight(containerRef.current.clientHeight);
+          setContainerWidth(containerRef.current.clientWidth);
+        }
+      }, 60);
     };
 
-    handleResize();
+    if (containerRef.current) {
+      setViewportHeight(containerRef.current.clientHeight);
+      setContainerWidth(containerRef.current.clientWidth);
+    }
+
     const observer = new ResizeObserver(handleResize);
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+    };
   }, []);
 
   // Compute cumulative heights and total height based on estimates.
-  // This computes EXACTLY ONCE when the chat is loaded.
+  // This computes whenever messages change or container width changes.
   const { cumulativeHeights, totalHeight } = useMemo(() => {
     const heights = new Array(messages.length + 1);
     heights[0] = 0;
     for (let i = 0; i < messages.length; i++) {
-      heights[i + 1] = heights[i] + estimateHeight(messages[i]);
+      heights[i + 1] = heights[i] + estimateHeight(messages[i], containerWidth);
     }
     return {
       cumulativeHeights: heights,
       totalHeight: heights[messages.length],
     };
-  }, [messages]);
+  }, [messages, containerWidth]);
 
   // Binary search to find the start index for rendering window
   const findStartIndex = (st: number) => {
@@ -194,12 +303,33 @@ export default function VirtualMessageList({
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
-    setScrollTop(target.scrollTop);
-    
-    // Show scroll to bottom button if we are scrolled up significantly
-    const isUp = target.scrollHeight - target.scrollTop - target.clientHeight > 400;
-    setShowScrollBottom(isUp);
+    const top = target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+
+    if (rafRef.current !== null) {
+      return;
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
+      setScrollTop(top);
+      
+      // Show scroll to bottom button if we are scrolled up significantly
+      const isUp = scrollHeight - top - clientHeight > 400;
+      setShowScrollBottom(isUp);
+      
+      rafRef.current = null;
+    });
   };
+
+  // Clean up raf on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   // Determine indices of items in current viewport
   const visibleStartIndex = findStartIndex(scrollTop);
@@ -273,87 +403,16 @@ export default function VirtualMessageList({
           <div className="flex flex-col gap-2.5 px-4 md:px-8 w-full max-w-4xl mx-auto">
             {visibleItems.map((message) => {
               const isMe = me !== null && message.sender === me;
-              const isSystem = message.isSystem;
               const isHighlighted = highlightedId === message.id;
 
-              if (isSystem) {
-                return (
-                  <div
-                    key={message.id}
-                    className="w-full flex justify-center my-1.5 focus:outline-none"
-                    id={`message-${message.id}`}
-                  >
-                    <div className="max-w-[85%] bg-white/70 border border-neutral-100 text-neutral-500 font-sans text-[11px] md:text-xs py-1 px-3 rounded-lg shadow-sm text-center flex items-center gap-1.5 leading-relaxed">
-                      <Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                      <span>{message.content}</span>
-                      {message.rawTimestamp && (
-                        <span className="text-[9px] text-neutral-400 font-mono shrink-0 ml-1">
-                          ({message.rawTimestamp.split(',')[1]?.trim() || message.rawTimestamp})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-
-              // Extract hours and minutes from timestamp or rawTimestamp
-              let formattedTime = '';
-              if (message.timestamp) {
-                formattedTime = message.timestamp.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                });
-              } else if (message.rawTimestamp) {
-                const parts = message.rawTimestamp.split(',');
-                formattedTime = parts[1]?.trim() || message.rawTimestamp;
-              }
-
               return (
-                <div
+                <MessageBubble
                   key={message.id}
-                  id={`message-${message.id}`}
-                  className={`w-full flex ${isMe ? 'justify-end' : 'justify-start'} transition-all`}
-                >
-                  <div
-                    className={`max-w-[82%] md:max-w-[72%] rounded-2xl relative shadow-sm transition-all duration-500 ${
-                      isMe
-                        ? 'bg-[#d9fdd3] border border-[#d1f4cb] text-[#111b21] rounded-tr-none'
-                        : 'bg-white border border-neutral-100 text-[#111b21] rounded-tl-none'
-                    } ${
-                      isHighlighted
-                        ? 'ring-4 ring-amber-400 scale-[1.01] shadow-md z-10'
-                        : ''
-                    }`}
-                  >
-                    <div className="px-3.5 py-2 flex flex-col">
-                      {/* Participant Name Header */}
-                      {!isMe && (
-                        <span
-                          className="font-sans font-semibold text-[12px] md:text-xs mb-0.5 truncate"
-                          style={{ color: getSenderColor(message.sender) }}
-                        >
-                          {message.sender}
-                        </span>
-                      )}
-
-                      {/* Attachment Container */}
-                      {message.isAttachment ? (
-                        <MediaAttachment type={message.attachmentType} content={message.content} />
-                      ) : (
-                        /* Text Message Content */
-                        <p className="font-sans text-[14px] md:text-base leading-[1.4] tracking-normal break-words pr-8">
-                          <HighlightedText text={message.content} search={searchQuery} />
-                        </p>
-                      )}
-
-                      {/* Timestamp Footer */}
-                      <span className="text-[10px] text-neutral-400 font-mono text-right mt-1 self-end leading-none select-none">
-                        {formattedTime}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  message={message}
+                  isMe={isMe}
+                  searchQuery={searchQuery}
+                  isHighlighted={isHighlighted}
+                />
               );
             })}
           </div>

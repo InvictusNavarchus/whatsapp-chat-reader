@@ -145,48 +145,49 @@ export default function SearchPanel({
               </span>
             </div>
 
-            <div className="divide-y divide-neutral-100">
-              {slicedMatches.map(({ index, message }) => {
-                const parts = message.content.split(new RegExp(`(${escapeRegExp(searchQuery)})`, 'gi'));
-                const messageTime = message.timestamp
-                  ? message.timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' })
-                  : message.rawTimestamp.split(',')[0] || '';
+             <div className="divide-y divide-neutral-100">
+              {(() => {
+                const searchRegex = searchQuery ? new RegExp(`(${escapeRegExp(searchQuery)})`, 'gi') : null;
+                return slicedMatches.map(({ index, message }) => {
+                  const parts = searchRegex ? message.content.split(searchRegex) : [message.content];
+                  const messageTime = message.formattedDateShort || (message.rawTimestamp.split(',')[0] || '');
 
-                return (
-                  <button
-                    key={message.id}
-                    type="button"
-                    onClick={() => onSelectMatch(index)}
-                    className="w-full text-left p-4 hover:bg-neutral-50 active:bg-neutral-100 transition-colors focus:outline-none focus:bg-neutral-50 flex flex-col gap-1 font-sans"
-                  >
-                    <div className="flex justify-between items-baseline w-full">
-                      <span className="font-semibold text-xs text-neutral-700 truncate max-w-[180px]">
-                        {message.sender}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-mono">
-                        {messageTime}
-                      </span>
-                    </div>
+                  return (
+                    <button
+                      key={message.id}
+                      type="button"
+                      onClick={() => onSelectMatch(index)}
+                      className="w-full text-left p-4 hover:bg-neutral-50 active:bg-neutral-100 transition-colors focus:outline-none focus:bg-neutral-50 flex flex-col gap-1 font-sans"
+                    >
+                      <div className="flex justify-between items-baseline w-full">
+                        <span className="font-semibold text-xs text-neutral-700 truncate max-w-[180px]">
+                          {message.sender}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono">
+                          {messageTime}
+                        </span>
+                      </div>
 
-                    <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed break-all">
-                      {parts.map((part, idx) =>
-                        part.toLowerCase() === searchQuery.toLowerCase() ? (
-                          <mark key={idx} className="bg-amber-100 text-amber-900 font-semibold rounded-[2px] px-0.5">
-                            {part}
-                          </mark>
-                        ) : (
-                          part
-                        )
-                      )}
-                    </p>
+                      <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed break-all">
+                        {parts.map((part, idx) =>
+                          part.toLowerCase() === searchQuery.toLowerCase() ? (
+                            <mark key={idx} className="bg-amber-100 text-amber-900 font-semibold rounded-[2px] px-0.5">
+                              {part}
+                            </mark>
+                          ) : (
+                            part
+                          )
+                        )}
+                      </p>
 
-                    <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold mt-1">
-                      <CornerDownRight className="w-3 h-3" />
-                      <span>Jump to message</span>
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold mt-1">
+                        <CornerDownRight className="w-3 h-3" />
+                        <span>Jump to message</span>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
         )}
