@@ -264,16 +264,31 @@ export default function VirtualMessageList({
 	// Jump to message logic using built-in scrollToIndex
 	useEffect(() => {
 		if (jumpToIndex !== null) {
+			// 1. Scroll immediately to estimated position
 			rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+
+			// 2. Scroll in next frame (before paint)
+			const rafId = requestAnimationFrame(() => {
+				rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+			});
+
+			// 3. Scroll after paint & layout completes (50ms) to adjust for dynamic height measurements
+			const timeoutId = setTimeout(() => {
+				rowVirtualizer.scrollToIndex(jumpToIndex, { align: 'center' });
+			}, 50);
 
 			// Trigger the flash animation on the selected message
 			setHighlightedId(messages[jumpToIndex].id);
-			const timer = setTimeout(() => {
+			const flashTimer = setTimeout(() => {
 				setHighlightedId(null);
 			}, 3000);
 
 			onJumpDone();
-			return () => clearTimeout(timer);
+			return () => {
+				cancelAnimationFrame(rafId);
+				clearTimeout(timeoutId);
+				clearTimeout(flashTimer);
+			};
 		}
 	}, [jumpToIndex, rowVirtualizer, messages, onJumpDone]);
 
@@ -301,7 +316,7 @@ export default function VirtualMessageList({
 			<div
 				ref={parentRef}
 				onScroll={handleScroll}
-				className="flex-1 overflow-y-auto relative py-4 scroll-smooth focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
+				className="flex-1 overflow-y-auto relative py-4 focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
 			>
 				<div
 					style={{
