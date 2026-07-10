@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useChatStore } from '../store/useChatStore';
 import type { Message } from '../types';
@@ -7,12 +7,8 @@ import { getChatChunk, DB_CHUNK_SIZE } from '../utils/db';
 export function useChunkedMessages(chatId: string | null, step: string) {
 	const queryClient = useQueryClient();
 	const totalMessages = useChatStore((state) => state.totalMessages);
-	const [loadedChunks, setLoadedChunks] = useState<Set<number>>(new Set());
-
-	// If chatId changes, clear local loadedChunks Set
-	useEffect(() => {
-		setLoadedChunks(new Set());
-	}, [chatId]);
+	const loadedChunks = useChatStore((state) => state.loadedChunks);
+	const setLoadedChunks = useChatStore((state) => state.setLoadedChunks);
 
 	const chunkCount = Math.ceil(totalMessages / DB_CHUNK_SIZE);
 
@@ -43,14 +39,12 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 	}, [results, chatId, totalMessages]);
 
 	// Mark a chunk to be loaded
-	const loadChunk = useCallback((index: number) => {
-		setLoadedChunks((prev) => {
-			if (prev.has(index)) return prev;
-			const next = new Set(prev);
-			next.add(index);
-			return next;
-		});
-	}, []);
+	const loadChunk = useCallback(
+		(index: number) => {
+			setLoadedChunks(new Set([...loadedChunks, index]));
+		},
+		[loadedChunks, setLoadedChunks],
+	);
 
 	// Background prefetching of unloaded message chunks.
 	useEffect(() => {
@@ -79,12 +73,7 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 				})
 				.then(() => {
 					// Once cached, enable it in our loadedChunks set to merge into the messages list
-					setLoadedChunks((prev) => {
-						if (prev.has(targetChunkIndex)) return prev;
-						const next = new Set(prev);
-						next.add(targetChunkIndex);
-						return next;
-					});
+					setLoadedChunks(new Set([...loadedChunks, targetChunkIndex]));
 				})
 				.catch((err) => {
 					console.error(
@@ -97,7 +86,15 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 		return () => {
 			clearTimeout(timer);
 		};
-	}, [chatId, step, totalMessages, loadedChunks, chunkCount, queryClient]);
+	}, [
+		chatId,
+		step,
+		totalMessages,
+		loadedChunks,
+		chunkCount,
+		queryClient,
+		setLoadedChunks,
+	]);
 
 	return {
 		messages,

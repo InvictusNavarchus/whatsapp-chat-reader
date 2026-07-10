@@ -1,55 +1,61 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	listChats,
 	deleteChat as dbDeleteChat,
 	renameChat as dbRenameChat,
-	type ChatMetadata,
 } from '../utils/db';
 
 export function useChatPersistence() {
-	const [savedChats, setSavedChats] = useState<ChatMetadata[]>([]);
+	const queryClient = useQueryClient();
 
-	const loadSavedChats = useCallback(() => {
-		listChats()
-			.then(setSavedChats)
-			.catch((err) => console.error('Failed to load saved chats:', err));
-	}, []);
+	// Fetch saved chats using React Query
+	const { data: savedChats = [] } = useQuery({
+		queryKey: ['savedChats'],
+		queryFn: listChats,
+	});
 
-	useEffect(() => {
-		loadSavedChats();
-	}, [loadSavedChats]);
+	const loadSavedChats = () => {
+		queryClient.invalidateQueries({ queryKey: ['savedChats'] });
+	};
 
-	const deleteChat = useCallback(
-		async (id: string) => {
-			if (
-				window.confirm(
-					'Are you sure you want to permanently delete this saved chat log?',
-				)
-			) {
-				try {
-					await dbDeleteChat(id);
-					loadSavedChats();
-				} catch (err) {
-					console.error('Failed to delete saved chat:', err);
-					alert('Failed to delete saved chat.');
-				}
-			}
+	const deleteMutation = useMutation({
+		mutationFn: dbDeleteChat,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['savedChats'] });
 		},
-		[loadSavedChats],
-	);
+	});
 
-	const renameChat = useCallback(
-		async (id: string, newName: string) => {
+	const renameMutation = useMutation({
+		mutationFn: ({ id, newName }: { id: string; newName: string }) =>
+			dbRenameChat(id, newName),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['savedChats'] });
+		},
+	});
+
+	const deleteChat = async (id: string) => {
+		if (
+			window.confirm(
+				'Are you sure you want to permanently delete this saved chat log?',
+			)
+		) {
 			try {
-				await dbRenameChat(id, newName);
-				loadSavedChats();
+				await deleteMutation.mutateAsync(id);
 			} catch (err) {
-				console.error('Failed to rename saved chat:', err);
-				alert('Failed to rename saved chat.');
+				console.error('Failed to delete saved chat:', err);
+				alert('Failed to delete saved chat.');
 			}
-		},
-		[loadSavedChats],
-	);
+		}
+	};
+
+	const renameChat = async (id: string, newName: string) => {
+		try {
+			await renameMutation.mutateAsync({ id, newName });
+		} catch (err) {
+			console.error('Failed to rename saved chat:', err);
+			alert('Failed to rename saved chat.');
+		}
+	};
 
 	return {
 		savedChats,

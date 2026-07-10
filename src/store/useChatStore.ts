@@ -13,6 +13,7 @@ interface ChatState {
 	dateMap: DateMapEntry[];
 	isConversationReady: boolean;
 	totalMessages: number;
+	loadedChunks: Set<number>;
 
 	// Search & navigation panel states
 	isSearchOpen: boolean;
@@ -30,6 +31,7 @@ interface ChatState {
 	setDateMap: (dateMap: DateMapEntry[]) => void;
 	setIsConversationReady: (ready: boolean) => void;
 	setTotalMessages: (total: number) => void;
+	setLoadedChunks: (chunks: Set<number>) => void;
 
 	// UI panels
 	setIsSearchOpen: (open: boolean) => void;
@@ -54,6 +56,7 @@ export const useChatStore = create<ChatState>((set) => ({
 	dateMap: [],
 	isConversationReady: false,
 	totalMessages: 0,
+	loadedChunks: new Set(),
 
 	isSearchOpen: false,
 	isStarredOpen: false,
@@ -69,6 +72,7 @@ export const useChatStore = create<ChatState>((set) => ({
 	setDateMap: (dateMap) => set({ dateMap }),
 	setIsConversationReady: (isConversationReady) => set({ isConversationReady }),
 	setTotalMessages: (totalMessages) => set({ totalMessages }),
+	setLoadedChunks: (loadedChunks) => set({ loadedChunks }),
 
 	setIsSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
 	setIsStarredOpen: (isStarredOpen) => set({ isStarredOpen }),
@@ -89,6 +93,7 @@ export const useChatStore = create<ChatState>((set) => ({
 			dateMap: [],
 			isConversationReady: false,
 			totalMessages: 0,
+			loadedChunks: new Set(),
 			isSearchOpen: false,
 			isStarredOpen: false,
 			searchQuery: '',
