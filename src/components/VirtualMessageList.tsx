@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { type UIEvent, useEffect, memo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
 	ChevronDown,
@@ -9,7 +9,7 @@ import {
 	Smile,
 	Info,
 } from 'lucide-react';
-import { Message } from '../types';
+import type { Message } from '../types';
 
 interface VirtualMessageListProps {
 	messages: Message[];
@@ -50,18 +50,22 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
 		return <span className="whitespace-pre-wrap">{text}</span>;
 	}
 	const parts = text.split(new RegExp(`(${escapeRegExp(search)})`, 'gi'));
+	const items = parts.map((part, i) => ({
+		id: `${i}-${part}`,
+		part,
+	}));
 	return (
 		<span className="whitespace-pre-wrap">
-			{parts.map((part, i) =>
-				part.toLowerCase() === search.toLowerCase() ? (
+			{items.map((item) =>
+				item.part.toLowerCase() === search.toLowerCase() ? (
 					<mark
-						key={i}
+						key={item.id}
 						className="bg-amber-100 text-amber-900 rounded-[2px] font-medium px-0.5"
 					>
-						{part}
+						{item.part}
 					</mark>
 				) : (
-					part
+					item.part
 				),
 			)}
 		</span>
@@ -124,7 +128,7 @@ function MediaAttachment({
 }
 
 // Memoized message bubble to prevent unneeded re-renders on scroll or search
-const MessageBubble = React.memo(function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
 	message,
 	isMe,
 	searchQuery,
@@ -227,7 +231,7 @@ export default function VirtualMessageList({
 	});
 
 	// Handle scrolling to bottom and showing/hiding the button
-	const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+	const handleScroll = (e: UIEvent<HTMLDivElement>) => {
 		const target = e.currentTarget;
 		const isUp =
 			target.scrollHeight - target.scrollTop - target.clientHeight > 400;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { type ChangeEvent, type DragEvent, useRef, useState } from 'react';
 import { Upload, FileText, BookOpen, AlertCircle } from 'lucide-react';
 import { SAMPLE_CHAT } from '../utils/sampleChat';
 
@@ -33,7 +33,7 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 		reader.readAsText(file);
 	};
 
-	const onDragOver = (e: React.DragEvent) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 		setIsDragging(true);
 	};
@@ -42,16 +42,16 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 		setIsDragging(false);
 	};
 
-	const onDrop = (e: React.DragEvent) => {
+	const onDrop = (e: DragEvent) => {
 		e.preventDefault();
 		setIsDragging(false);
-		if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+		if (e.dataTransfer.files?.[0]) {
 			handleFile(e.dataTransfer.files[0]);
 		}
 	};
 
-	const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (e.target.files && e.target.files[0]) {
+	const onFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files?.[0]) {
 			handleFile(e.target.files[0]);
 		}
 	};
@@ -76,13 +76,14 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 			</div>
 
 			{/* Main Drag & Drop / Upload Card */}
-			<div
+			<button
 				id="dropzone"
+				type="button"
 				onDragOver={onDragOver}
 				onDragLeave={onDragLeave}
 				onDrop={onDrop}
 				onClick={() => fileInputRef.current?.click()}
-				className={`w-full bg-white rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[260px] relative overflow-hidden ${
+				className={`w-full bg-white rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[260px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
 					isDragging
 						? 'border-emerald-500 bg-emerald-50/40 scale-[0.99]'
 						: 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/50'
@@ -96,25 +97,25 @@ export default function FileUploader({ onChatLoaded }: FileUploaderProps) {
 					className="hidden"
 				/>
 
-				<div
-					className={`p-4 rounded-full mb-4 transition-colors ${isDragging ? 'bg-emerald-100 text-emerald-600' : 'bg-neutral-50 text-neutral-400 group-hover:bg-neutral-100'}`}
+				<span
+					className={`p-4 rounded-full mb-4 transition-colors inline-flex ${isDragging ? 'bg-emerald-100 text-emerald-600' : 'bg-neutral-50 text-neutral-400 group-hover:bg-neutral-100'}`}
 				>
 					<Upload className="w-8 h-8" />
-				</div>
+				</span>
 
-				<p className="font-sans font-medium text-neutral-800 text-base mb-1">
+				<span className="font-sans font-medium text-neutral-800 text-base mb-1 block">
 					{isDragging
 						? 'Drop your chat file here!'
 						: 'Drag & drop your chat .txt file here'}
-				</p>
-				<p className="font-sans text-neutral-400 text-xs md:text-sm mb-4">
+				</span>
+				<span className="font-sans text-neutral-400 text-xs md:text-sm mb-4 block">
 					or click to browse your local files
-				</p>
+				</span>
 
-				<div className="px-3 py-1 bg-neutral-100 text-neutral-600 font-mono text-[10px] uppercase tracking-wider rounded-md font-semibold">
+				<span className="px-3 py-1 bg-neutral-100 text-neutral-600 font-mono text-[10px] uppercase tracking-wider rounded-md font-semibold inline-block">
 					Supports iOS & Android formats
-				</div>
-			</div>
+				</span>
+			</button>
 
 			{error && (
 				<div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-100 text-sm max-w-full">

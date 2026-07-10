@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, MessageSquare, ArrowRight, BookOpen } from 'lucide-react';
 
 interface ParticipantSelectorProps {

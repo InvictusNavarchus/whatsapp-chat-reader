@@ -1,4 +1,4 @@
-import { Message } from '../types';
+import type { Message } from '../types';
 
 // Regular expressions to detect WhatsApp message header prefixes.
 // 1. Android style: "dd/mm/yyyy, hh:mm - Sender: Message" or "mm/dd/yy, hh:mm PM - Sender: Message"
@@ -60,7 +60,7 @@ function parseDate(
 
 		const part0 = parseInt(dateParts[0], 10);
 		const part1 = parseInt(dateParts[1], 10);
-		let part2 = parseInt(dateParts[2], 10);
+		const part2 = parseInt(dateParts[2], 10);
 
 		// Normalize 2-digit years
 		if (part2 < 100) {
@@ -97,8 +97,8 @@ function parseDate(
 		}
 
 		const d = new Date(year, month, day, hours, minutes, seconds);
-		return isNaN(d.getTime()) ? null : d;
-	} catch (e) {
+		return Number.isNaN(d.getTime()) ? null : d;
+	} catch {
 		return null;
 	}
 }
@@ -117,7 +117,7 @@ function finalizeMessage(msg: Message): Message {
 				month: 'short',
 				day: 'numeric',
 			});
-		} catch (e) {
+		} catch {
 			msg.formattedTime = '';
 			msg.formattedDateShort = '';
 		}
@@ -251,7 +251,7 @@ export function parseWhatsAppChat(text: string): Message[] {
 		} else {
 			// It's a multiline continuation of the current message
 			if (currentMessage) {
-				currentMessage.content += '\n' + line;
+				currentMessage.content += `\n${line}`;
 			} else {
 				// Line before any valid message header (unusual, treat as a system message)
 				currentMessage = {

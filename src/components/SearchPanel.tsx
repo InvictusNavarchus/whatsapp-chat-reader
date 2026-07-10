@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, CornerDownRight } from 'lucide-react';
-import { Message, SearchMatch } from '../types';
+import type { Message, SearchMatch } from '../types';
 
 const escapeRegExp = (str: string) =>
 	str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -182,18 +182,20 @@ export default function SearchPanel({
 											</div>
 
 											<p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed break-all">
-												{parts.map((part, idx) =>
-													part.toLowerCase() === searchQuery.toLowerCase() ? (
+												{parts.map((part, idx) => {
+													const partKey = `${message.id}-part-${idx}`;
+													return part.toLowerCase() ===
+														searchQuery.toLowerCase() ? (
 														<mark
-															key={idx}
+															key={partKey}
 															className="bg-amber-100 text-amber-900 font-semibold rounded-[2px] px-0.5"
 														>
 															{part}
 														</mark>
 													) : (
 														part
-													),
-												)}
+													);
+												})}
 											</p>
 
 											<div className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold mt-1">

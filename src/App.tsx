@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -6,7 +6,7 @@ import ChatHeader from './components/ChatHeader';
 import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
 import { parseWhatsAppChat } from './utils/parser';
-import { Message } from './types';
+import type { Message } from './types';
 
 type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
 

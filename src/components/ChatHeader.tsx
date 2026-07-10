@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
 	Search,
 	Calendar,
@@ -7,7 +7,7 @@ import {
 	ArrowLeft,
 	X,
 } from 'lucide-react';
-import { Message } from '../types';
+import type { Message } from '../types';
 
 interface ChatHeaderProps {
 	fileName: string;
