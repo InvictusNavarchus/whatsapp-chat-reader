@@ -1,6 +1,6 @@
 {
-  "name": "WhatsApp Chat Reader",
-  "description": "A high-performance, mobile-responsive reader for WhatsApp exported chat logs (.txt) with rapid search and instant jumping.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+	"name": "WhatsApp Chat Reader",
+	"description": "A high-performance, mobile-responsive reader for WhatsApp exported chat logs (.txt) with rapid search and instant jumping.",
+	"requestFramePermissions": [],
+	"majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
