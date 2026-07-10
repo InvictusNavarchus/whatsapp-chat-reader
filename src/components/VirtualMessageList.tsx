@@ -195,7 +195,7 @@ const MessageBubble = memo(function MessageBubble({
 						/>
 					) : (
 						/* Text Message Content */
-						<p className="font-sans text-[14px] md:text-base leading-[1.4] tracking-normal break-words pr-8">
+						<p className="font-sans text-[14px] md:text-base leading-[1.4] tracking-normal wrap-break-word pr-8">
 							<HighlightedText text={message.content} search={searchQuery} />
 						</p>
 					)}
