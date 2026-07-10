@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -27,6 +27,18 @@ export default function App() {
 	// Background parsing states
 	const [isParsing, setIsParsing] = useState(false);
 	const [parseProgress, setParseProgress] = useState<number | null>(null);
+
+	// Defer mounting heavy VirtualMessageList to let loading view paint first
+	const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
+
+	useEffect(() => {
+		if (step === 'READER' && !isWorkspaceReady) {
+			const timer = setTimeout(() => {
+				setIsWorkspaceReady(true);
+			}, 100);
+			return () => clearTimeout(timer);
+		}
+	}, [step, isWorkspaceReady]);
 
 	const handleChatLoaded = (text: string, name: string) => {
 		setIsParsing(true);
@@ -88,6 +100,7 @@ export default function App() {
 					setStep('SELECT_IDENTITY');
 				} else {
 					setMe(null);
+					setIsWorkspaceReady(false);
 					setStep('READER');
 				}
 			} else if (type === 'error') {
@@ -109,6 +122,7 @@ export default function App() {
 
 	const handleIdentitySelected = (name: string | null) => {
 		setMe(name);
+		setIsWorkspaceReady(false);
 		setStep('READER');
 	};
 
@@ -117,6 +131,7 @@ export default function App() {
 			window.confirm('Are you sure you want to unload the current chat log?')
 		) {
 			setStep('UPLOAD');
+			setIsWorkspaceReady(false);
 			setMessages([]);
 			setDateMap([]);
 			setFileName('');
@@ -264,36 +279,51 @@ export default function App() {
 						/>
 
 						{/* Chat Area Content Workspace */}
-						<div className="flex-1 flex flex-row overflow-hidden relative">
-							{/* Main Scrolling Viewer */}
-							<VirtualMessageList
-								messages={messages}
-								me={me}
-								searchQuery={searchQuery}
-								jumpToIndex={jumpToIndex}
-								onJumpDone={() => setJumpToIndex(null)}
-							/>
+						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-center">
+							{isWorkspaceReady ? (
+								<>
+									{/* Main Scrolling Viewer */}
+									<VirtualMessageList
+										messages={messages}
+										me={me}
+										searchQuery={searchQuery}
+										jumpToIndex={jumpToIndex}
+										onJumpDone={() => setJumpToIndex(null)}
+									/>
 
-							{/* Collapsible Slide-out Search Panel */}
-							<AnimatePresence>
-								{isSearchOpen && (
-									<motion.div
-										initial={{ x: '100%' }}
-										animate={{ x: 0 }}
-										exit={{ x: '100%' }}
-										transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-										className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full"
-									>
-										<SearchPanel
-											messages={messages}
-											searchQuery={searchQuery}
-											onSearchQueryChange={setSearchQuery}
-											onSelectMatch={handleJumpToMessage}
-											onClose={() => setIsSearchOpen(false)}
-										/>
-									</motion.div>
-								)}
-							</AnimatePresence>
+									{/* Collapsible Slide-out Search Panel */}
+									<AnimatePresence>
+										{isSearchOpen && (
+											<motion.div
+												initial={{ x: '100%' }}
+												animate={{ x: 0 }}
+												exit={{ x: '100%' }}
+												transition={{
+													type: 'spring',
+													damping: 25,
+													stiffness: 220,
+												}}
+												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full"
+											>
+												<SearchPanel
+													messages={messages}
+													searchQuery={searchQuery}
+													onSearchQueryChange={setSearchQuery}
+													onSelectMatch={handleJumpToMessage}
+													onClose={() => setIsSearchOpen(false)}
+												/>
+											</motion.div>
+										)}
+									</AnimatePresence>
+								</>
+							) : (
+								<div className="flex flex-col items-center justify-center gap-3 py-12">
+									<Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+									<p className="text-neutral-500 font-sans text-sm font-medium animate-pulse">
+										Loading conversation workspace...
+									</p>
+								</div>
+							)}
 						</div>
 					</motion.div>
 				)}
