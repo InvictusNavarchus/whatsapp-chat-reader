@@ -1,40 +1,42 @@
 {
-  "name": "react-example",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@google/genai": "^2.11.0",
-    "@tailwindcss/vite": "^4.3.2",
-    "@tanstack/react-virtual": "^3.14.5",
-    "@vitejs/plugin-react": "^6.0.3",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "lucide-react": "^1.24.0",
-    "motion": "^12.42.2",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "vite": "^6.2.3"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.3",
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.1.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "autoprefixer": "^10.5.2",
-    "esbuild": "^0.28.1",
-    "lefthook": "^2.1.10",
-    "tailwindcss": "^4.3.2",
-    "tsx": "^4.23.0",
-    "typescript": "~7.0.2",
-    "vite": "^8.1.4"
-  }
+	"name": "react-example",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite --port=3000 --host=0.0.0.0",
+		"build": "vite build",
+		"preview": "vite preview",
+		"clean": "rm -rf dist server.js",
+		"format": "biome format --write",
+		"lint": "biome lint",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@google/genai": "^2.11.0",
+		"@tailwindcss/vite": "^4.3.2",
+		"@tanstack/react-virtual": "^3.14.5",
+		"@vitejs/plugin-react": "^6.0.3",
+		"dotenv": "^17.4.2",
+		"express": "^5.2.1",
+		"lucide-react": "^1.24.0",
+		"motion": "^12.42.2",
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7",
+		"vite": "^6.2.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.3",
+		"@types/express": "^5.0.6",
+		"@types/node": "^26.1.1",
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"autoprefixer": "^10.5.2",
+		"esbuild": "^0.28.1",
+		"lefthook": "^2.1.10",
+		"tailwindcss": "^4.3.2",
+		"tsx": "^4.23.0",
+		"typescript": "~7.0.2",
+		"vite": "^8.1.4"
+	}
 }
