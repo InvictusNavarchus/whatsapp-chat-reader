@@ -304,14 +304,16 @@ export default function VirtualMessageList({
 									width: '100%',
 									transform: `translateY(${virtualRow.start}px)`,
 								}}
-								className="px-4 md:px-8 w-full max-w-4xl mx-auto py-1.5"
+								className="py-1.5 px-4 md:px-8"
 							>
-								<MessageBubble
-									message={message}
-									isMe={isMe}
-									searchQuery={searchQuery}
-									isHighlighted={isHighlighted}
-								/>
+								<div className="w-full max-w-4xl mx-auto">
+									<MessageBubble
+										message={message}
+										isMe={isMe}
+										searchQuery={searchQuery}
+										isHighlighted={isHighlighted}
+									/>
+								</div>
 							</div>
 						);
 					})}
