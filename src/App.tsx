@@ -525,7 +525,7 @@ export default function App() {
 								</div>
 								<div className="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden border border-neutral-200/50">
 									<motion.div
-										className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+										className="h-full bg-linear-to-r from-emerald-500 to-teal-500 rounded-full"
 										initial={{ width: 0 }}
 										animate={{ width: `${parseProgress ?? 0}%` }}
 										transition={{ duration: 0.1, ease: 'easeOut' }}
