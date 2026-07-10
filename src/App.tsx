@@ -650,10 +650,11 @@ export default function App() {
 										onLoadChunk={handleLoadChunk}
 									/>
 
-									{/* Collapsible Slide-out Search Panel */}
+									{/* Collapsible Side Panel (Search / Starred Messages) */}
 									<AnimatePresence>
-										{isSearchOpen && (
+										{(isSearchOpen || isStarredOpen) && (
 											<motion.div
+												key="sidebar-panel"
 												initial={{ x: '100%' }}
 												animate={{ x: 0 }}
 												exit={{ x: '100%' }}
@@ -664,38 +665,43 @@ export default function App() {
 												}}
 												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full overflow-hidden flex flex-col"
 											>
-												<SearchPanel
-													messages={messages}
-													searchQuery={searchQuery}
-													onSearchQueryChange={setSearchQuery}
-													onSelectMatch={handleJumpToMessage}
-													onClose={() => setIsSearchOpen(false)}
-												/>
-											</motion.div>
-										)}
-									</AnimatePresence>
-
-									{/* Collapsible Slide-out Starred Messages Panel */}
-									<AnimatePresence>
-										{isStarredOpen && (
-											<motion.div
-												initial={{ x: '100%' }}
-												animate={{ x: 0 }}
-												exit={{ x: '100%' }}
-												transition={{
-													type: 'spring',
-													damping: 25,
-													stiffness: 220,
-												}}
-												className="absolute right-0 top-0 bottom-0 md:relative h-full shadow-2xl md:shadow-none z-40 max-w-full overflow-hidden flex flex-col"
-											>
-												<StarredPanel
-													messages={messages}
-													starredMessageIds={starredMessageIds}
-													onSelectMessage={handleJumpToMessage}
-													onClose={() => setIsStarredOpen(false)}
-													onToggleStar={handleToggleStarMessage}
-												/>
+												<AnimatePresence mode="wait" initial={false}>
+													{isSearchOpen ? (
+														<motion.div
+															key="search"
+															initial={{ opacity: 0 }}
+															animate={{ opacity: 1 }}
+															exit={{ opacity: 0 }}
+															transition={{ duration: 0.15 }}
+															className="h-full flex flex-col"
+														>
+															<SearchPanel
+																messages={messages}
+																searchQuery={searchQuery}
+																onSearchQueryChange={setSearchQuery}
+																onSelectMatch={handleJumpToMessage}
+																onClose={() => setIsSearchOpen(false)}
+															/>
+														</motion.div>
+													) : (
+														<motion.div
+															key="starred"
+															initial={{ opacity: 0 }}
+															animate={{ opacity: 1 }}
+															exit={{ opacity: 0 }}
+															transition={{ duration: 0.15 }}
+															className="h-full flex flex-col"
+														>
+															<StarredPanel
+																messages={messages}
+																starredMessageIds={starredMessageIds}
+																onSelectMessage={handleJumpToMessage}
+																onClose={() => setIsStarredOpen(false)}
+																onToggleStar={handleToggleStarMessage}
+															/>
+														</motion.div>
+													)}
+												</AnimatePresence>
 											</motion.div>
 										)}
 									</AnimatePresence>
