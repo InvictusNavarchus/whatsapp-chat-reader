@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
+import { useChatStore } from '../store/useChatStore';
 import { updateChatStarredMessages } from '../utils/db';
 
 export function useStarredMessages(
 	chatId: string | null,
 	onSaveSuccess?: () => void,
 ) {
-	const [isStarredOpen, setIsStarredOpen] = useState(false);
+	const isStarredOpen = useChatStore((state) => state.isStarredOpen);
+	const setIsStarredOpen = useChatStore((state) => state.setIsStarredOpen);
 	const [starredMessageIds, setStarredMessageIds] = useState<Set<number>>(
 		new Set(),
 	);

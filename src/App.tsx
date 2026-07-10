@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import FileUploader from './components/FileUploader';
 import ParticipantSelector from './components/ParticipantSelector';
@@ -18,26 +18,44 @@ import {
 	DB_CHUNK_SIZE,
 } from './utils/db';
 
+import { useChatStore } from './store/useChatStore';
 import { useChatParser } from './hooks/useChatParser';
 import { useChatPersistence } from './hooks/useChatPersistence';
 import { useChunkedMessages } from './hooks/useChunkedMessages';
 import { useStarredMessages } from './hooks/useStarredMessages';
 import { useSearchAndJump } from './hooks/useSearchAndJump';
 
-type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
-
 export default function App() {
-	const [step, setStep] = useState<AppStep>('UPLOAD');
-	const [dateMap, setDateMap] = useState<DateMapEntry[]>([]);
-	const [fileName, setFileName] = useState<string>('');
-	const [participants, setParticipants] = useState<string[]>([]);
-	const [senderCounts, setSenderCounts] = useState<Record<string, number>>({});
-	const [me, setMe] = useState<string | null>(null);
-
-	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
-	// Defer mounting heavy VirtualMessageList to let loading view paint first
-	const [isConversationReady, setIsConversationReady] = useState(false);
+	// Zustand store
+	const {
+		step,
+		setStep,
+		dateMap,
+		setDateMap,
+		fileName,
+		setFileName,
+		participants,
+		setParticipants,
+		senderCounts,
+		setSenderCounts,
+		me,
+		setMe,
+		currentChatId,
+		setCurrentChatId,
+		isConversationReady,
+		setIsConversationReady,
+		isSearchOpen,
+		setIsSearchOpen,
+		isStarredOpen,
+		setIsStarredOpen,
+		searchQuery,
+		setSearchQuery,
+		jumpToIndex,
+		setJumpToIndex,
+		openSearch,
+		openStarred,
+		reset: resetStore,
+	} = useChatStore();
 
 	// Custom hooks
 	const { savedChats, loadSavedChats, deleteChat, renameChat } =
@@ -46,23 +64,10 @@ export default function App() {
 	const { messages, setMessages, loadedChunks, setLoadedChunks, loadChunk } =
 		useChunkedMessages(currentChatId, step);
 
-	const {
-		isStarredOpen,
-		setIsStarredOpen,
-		starredMessageIds,
-		setStarredMessageIds,
-		toggleStarMessage,
-	} = useStarredMessages(currentChatId, loadSavedChats);
+	const { starredMessageIds, setStarredMessageIds, toggleStarMessage } =
+		useStarredMessages(currentChatId, loadSavedChats);
 
-	const {
-		isSearchOpen,
-		setIsSearchOpen,
-		searchQuery,
-		setSearchQuery,
-		jumpToIndex,
-		setJumpToIndex,
-		jumpToMessage,
-	} = useSearchAndJump(() => setIsStarredOpen(false));
+	const { jumpToMessage } = useSearchAndJump();
 
 	const handleParseComplete = useCallback(
 		({
@@ -86,7 +91,6 @@ export default function App() {
 			setSenderCounts(parsedSenderCounts || {});
 			setFileName(name);
 
-			// For newly uploaded chats, all parsed messages are in memory, so mark all chunks as loaded
 			const chunkCount = Math.ceil(parsed.length / DB_CHUNK_SIZE);
 			const allLoaded = new Set<number>();
 			for (let i = 0; i < chunkCount; i++) {
@@ -94,7 +98,6 @@ export default function App() {
 			}
 			setLoadedChunks(allLoaded);
 
-			// Auto-save to IndexedDB
 			saveChat(
 				name,
 				parsed,
@@ -119,7 +122,19 @@ export default function App() {
 				setStep('READER');
 			}
 		},
-		[loadSavedChats, setLoadedChunks, setMessages],
+		[
+			loadSavedChats,
+			setLoadedChunks,
+			setMessages,
+			setDateMap,
+			setParticipants,
+			setSenderCounts,
+			setFileName,
+			setCurrentChatId,
+			setStep,
+			setMe,
+			setIsConversationReady,
+		],
 	);
 
 	const handleParseError = useCallback((err: string) => {
@@ -148,22 +163,11 @@ export default function App() {
 		if (
 			window.confirm('Are you sure you want to unload the current chat log?')
 		) {
-			setStep('UPLOAD');
-			setIsConversationReady(false);
+			resetStore();
 			setMessages([]);
-			setDateMap([]);
-			setFileName('');
-			setParticipants([]);
-			setSenderCounts({});
-			setMe(null);
-			setCurrentChatId(null);
-			setIsSearchOpen(false);
-			setSearchQuery('');
-			setJumpToIndex(null);
 			setStarredMessageIds(new Set());
-			setIsStarredOpen(false);
 			setLoadedChunks(new Set());
-			loadSavedChats(); // Refresh on back
+			loadSavedChats();
 		}
 	};
 
@@ -393,20 +397,14 @@ export default function App() {
 							participants={participants}
 							me={me}
 							onBack={handleBackToUpload}
-							onSearchToggle={() => {
-								setIsSearchOpen(!isSearchOpen);
-								setIsStarredOpen(false);
-							}}
+							onSearchToggle={openSearch}
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={jumpToMessage}
 							dateMap={dateMap}
 							onRename={handleRenameCurrentChat}
 							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
 							isStarredOpen={isStarredOpen}
-							onStarredToggle={() => {
-								setIsStarredOpen(!isStarredOpen);
-								setIsSearchOpen(false);
-							}}
+							onStarredToggle={openStarred}
 						/>
 
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">
