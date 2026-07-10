@@ -1,4 +1,10 @@
-import { type ChangeEvent, type DragEvent, useRef, useState } from 'react';
+import {
+	type ChangeEvent,
+	type DragEvent,
+	useRef,
+	useState,
+	Fragment,
+} from 'react';
 import {
 	Upload,
 	FileText,
@@ -239,103 +245,118 @@ export default function FileUploader({
 							const isEditing = editingId === chat.id;
 
 							return (
-								<div
-									key={chat.id}
-									onClick={() => onLoadSavedChat(chat.id)}
-									className="group p-4 hover:bg-neutral-50/50 transition-colors flex items-center justify-between gap-4 cursor-pointer"
-								>
-									<div className="min-w-0 flex-1">
-										{isEditing ? (
-											<form
-												onSubmit={(e) => submitRename(e, chat)}
-												className="flex items-center gap-2"
-												onClick={(e) => e.stopPropagation()}
-											>
-												<input
-													ref={renameInputRef}
-													type="text"
-													value={editNameValue}
-													onChange={(e) => setEditNameValue(e.target.value)}
-													onBlur={() => {
-														// Give click event on confirm button priority
-														setTimeout(() => {
-															if (editingId === chat.id) cancelRename();
-														}, 200);
-													}}
-													className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full max-w-xs"
-												/>
-												<button
-													type="submit"
-													className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg"
-													title="Confirm rename"
+								<Fragment key={chat.id}>
+									{/* biome-ignore lint/a11y/useSemanticElements: contains nested interactive elements (form, edit/delete buttons) so it cannot be a button element */}
+									<div
+										role="button"
+										tabIndex={0}
+										onClick={() => {
+											if (!isEditing) {
+												onLoadSavedChat(chat.id);
+											}
+										}}
+										onKeyDown={(e) => {
+											if (!isEditing && (e.key === 'Enter' || e.key === ' ')) {
+												e.preventDefault();
+												onLoadSavedChat(chat.id);
+											}
+										}}
+										className="group p-4 hover:bg-neutral-50/50 transition-colors flex items-center justify-between gap-4 cursor-pointer focus:outline-none focus-visible:bg-neutral-50/50"
+									>
+										<div className="min-w-0 flex-1">
+											{isEditing ? (
+												<form
+													onSubmit={(e) => submitRename(e, chat)}
+													className="flex items-center gap-2"
+													onClick={(e) => e.stopPropagation()}
+													onKeyDown={(e) => e.stopPropagation()}
 												>
-													<Check className="w-4 h-4" />
+													<input
+														ref={renameInputRef}
+														type="text"
+														value={editNameValue}
+														onChange={(e) => setEditNameValue(e.target.value)}
+														onBlur={() => {
+															// Give click event on confirm button priority
+															setTimeout(() => {
+																if (editingId === chat.id) cancelRename();
+															}, 200);
+														}}
+														className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full max-w-xs"
+													/>
+													<button
+														type="submit"
+														className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg"
+														title="Confirm rename"
+													>
+														<Check className="w-4 h-4" />
+													</button>
+													<button
+														type="button"
+														onClick={cancelRename}
+														className="p-1.5 hover:bg-neutral-100 text-neutral-500 rounded-lg"
+														title="Cancel"
+													>
+														<X className="w-4 h-4" />
+													</button>
+												</form>
+											) : (
+												<>
+													<h4 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate group-hover:text-emerald-700 transition-colors">
+														{displayName}
+													</h4>
+													<div className="text-neutral-400 font-sans text-xs flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+														<span className="flex items-center gap-1">
+															<Users className="w-3.5 h-3.5" />
+															{chat.participants.length}
+														</span>
+														<span>•</span>
+														<span className="flex items-center gap-1">
+															<MessageSquare className="w-3.5 h-3.5" />
+															{chat.messageCount.toLocaleString()}
+														</span>
+														<span>•</span>
+														<span>
+															Opened {formatRelativeTime(chat.lastOpened)}
+														</span>
+														{chat.me && (
+															<>
+																<span>•</span>
+																<span className="text-emerald-600/80 font-medium">
+																	Me: {chat.me}
+																</span>
+															</>
+														)}
+													</div>
+												</>
+											)}
+										</div>
+
+										{!isEditing && (
+											<div className="flex items-center gap-1 shrink-0">
+												<button
+													type="button"
+													onClick={(e) => startRename(e, chat)}
+													className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none"
+													title="Rename chat log"
+												>
+													<Pencil className="w-4 h-4" />
 												</button>
 												<button
 													type="button"
-													onClick={cancelRename}
-													className="p-1.5 hover:bg-neutral-100 text-neutral-500 rounded-lg"
-													title="Cancel"
+													onClick={(e) => {
+														e.stopPropagation();
+														onDeleteSavedChat(chat.id);
+													}}
+													className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
+													title="Delete saved chat"
 												>
-													<X className="w-4 h-4" />
+													<Trash2 className="w-4 h-4" />
 												</button>
-											</form>
-										) : (
-											<>
-												<h4 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate group-hover:text-emerald-700 transition-colors">
-													{displayName}
-												</h4>
-												<div className="text-neutral-400 font-sans text-xs flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-													<span className="flex items-center gap-1">
-														<Users className="w-3.5 h-3.5" />
-														{chat.participants.length}
-													</span>
-													<span>•</span>
-													<span className="flex items-center gap-1">
-														<MessageSquare className="w-3.5 h-3.5" />
-														{chat.messageCount.toLocaleString()}
-													</span>
-													<span>•</span>
-													<span>
-														Opened {formatRelativeTime(chat.lastOpened)}
-													</span>
-													{chat.me && (
-														<>
-															<span>•</span>
-															<span className="text-emerald-600/80 font-medium">
-																Me: {chat.me}
-															</span>
-														</>
-													)}
-												</div>
-											</>
+											</div>
 										)}
 									</div>
-
-									{!isEditing && (
-										<div className="flex items-center gap-1 shrink-0">
-											<button
-												type="button"
-												onClick={(e) => startRename(e, chat)}
-												className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none"
-												title="Rename chat log"
-											>
-												<Pencil className="w-4 h-4" />
-											</button>
-											<button
-												type="button"
-												onClick={(e) => {
-													e.stopPropagation();
-													onDeleteSavedChat(chat.id);
-												}}
-												className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
-												title="Delete saved chat"
-											>
-												<Trash2 className="w-4 h-4" />
-											</button>
-										</div>
-									)}
-								</div>
+								</Fragment>
 							);
 						})}
 					</div>

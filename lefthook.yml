@@ -4,6 +4,8 @@ pre-commit:
   jobs:
     - name: typecheck
       run: bun run typecheck
+    - name: lint
+      run: bun run lint
     - name: format
       run: bun run format {staged_files}
       stage_fixed: true

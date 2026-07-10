@@ -120,7 +120,7 @@ export async function getChatMessages(
 
 	// Otherwise, load metadata to find chunks
 	const metadata = await getChatMetadata(id);
-	if (!metadata || !metadata.chunkCount) return undefined;
+	if (!metadata?.chunkCount) return undefined;
 
 	const chunkPromises: Promise<Message[] | undefined>[] = [];
 	for (let i = 0; i < metadata.chunkCount; i++) {

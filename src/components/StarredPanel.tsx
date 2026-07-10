@@ -69,9 +69,18 @@ export default function StarredPanel({
 										className="w-full text-left p-4 hover:bg-neutral-50/50 transition-colors flex flex-col gap-1 font-sans relative group"
 									>
 										{/* Clicking this region jumps to the message */}
+										{/* biome-ignore lint/a11y/useSemanticElements: custom interactive region to exclude the absolute positioned unstar button */}
 										<div
+											role="button"
+											tabIndex={0}
 											onClick={() => onSelectMessage(index)}
-											className="cursor-pointer flex-1 flex flex-col gap-1 pr-8"
+											onKeyDown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													e.preventDefault();
+													onSelectMessage(index);
+												}
+											}}
+											className="cursor-pointer flex-1 flex flex-col gap-1 pr-8 focus:outline-none focus-visible:bg-neutral-50/50 rounded"
 										>
 											<div className="flex justify-between items-baseline w-full">
 												<span className="font-semibold text-xs text-neutral-700 truncate max-w-[180px]">

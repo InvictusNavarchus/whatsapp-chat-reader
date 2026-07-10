@@ -385,9 +385,14 @@ export default function VirtualMessageList({
 
 	// Split messages into chunk groups
 	const chunks = useMemo(() => {
-		const result: Message[][] = [];
+		const result: { id: string; messages: Message[] }[] = [];
+		let chunkIndex = 0;
 		for (let i = 0; i < messages.length; i += DB_CHUNK_SIZE) {
-			result.push(messages.slice(i, i + DB_CHUNK_SIZE));
+			result.push({
+				id: `chunk-${chunkIndex}`,
+				messages: messages.slice(i, i + DB_CHUNK_SIZE),
+			});
+			chunkIndex++;
 		}
 		return result;
 	}, [messages]);
@@ -506,11 +511,11 @@ export default function VirtualMessageList({
 				className="flex-1 overflow-y-auto relative py-4 focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
 				style={{ overflowAnchor: 'auto' }}
 			>
-				{chunks.map((chunkMessages, index) => (
+				{chunks.map((chunk, index) => (
 					<MessageChunk
-						key={index}
+						key={chunk.id}
 						chunkIndex={index}
-						messages={chunkMessages}
+						messages={chunk.messages}
 						me={me}
 						searchQuery={searchQuery}
 						starredMessageIds={starredMessageIds}

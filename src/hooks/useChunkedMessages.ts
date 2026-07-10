@@ -17,7 +17,8 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 	const results = useQueries({
 		queries: Array.from({ length: chunkCount }, (_, i) => ({
 			queryKey: ['chat', chatId, 'chunk', i],
-			queryFn: () => getChatChunk(chatId!, i),
+			queryFn: () =>
+				chatId ? getChatChunk(chatId, i) : Promise.resolve(undefined),
 			enabled: !!chatId && loadedChunks.has(i),
 			staleTime: Infinity,
 		})),

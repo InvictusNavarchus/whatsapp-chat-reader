@@ -56,7 +56,6 @@ export default function App() {
 		setJumpToIndex,
 		openSearch,
 		openStarred,
-		totalMessages,
 		setTotalMessages,
 		reset: resetStore,
 	} = useChatStore();
@@ -65,8 +64,10 @@ export default function App() {
 	const { savedChats, loadSavedChats, deleteChat, renameChat } =
 		useChatPersistence();
 
-	const { messages, loadedChunks, setLoadedChunks, loadChunk } =
-		useChunkedMessages(currentChatId, step);
+	const { messages, setLoadedChunks, loadChunk } = useChunkedMessages(
+		currentChatId,
+		step,
+	);
 
 	const { starredMessageIds, setStarredMessageIds, toggleStarMessage } =
 		useStarredMessages(currentChatId, loadSavedChats);
