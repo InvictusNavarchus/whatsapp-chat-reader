@@ -13,14 +13,15 @@
   "dependencies": {
     "@google/genai": "^2.11.0",
     "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-virtual": "^3.14.5",
     "@vitejs/plugin-react": "^6.0.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "lucide-react": "^1.24.0",
+    "motion": "^12.42.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "vite": "^6.2.3",
-    "express": "^5.2.1",
-    "dotenv": "^17.4.2",
-    "motion": "^12.42.2"
+    "vite": "^6.2.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
