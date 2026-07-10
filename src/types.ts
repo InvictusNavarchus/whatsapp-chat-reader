@@ -24,3 +24,9 @@ export interface SearchMatch {
 	index: number;
 	message: Message;
 }
+
+export interface DateMapEntry {
+	dateStr: string;
+	index: number;
+	count: number;
+}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
 	Search,
 	Calendar,
@@ -7,7 +7,7 @@ import {
 	ArrowLeft,
 	X,
 } from 'lucide-react';
-import type { Message } from '../types';
+import type { Message, DateMapEntry } from '../types';
 
 interface ChatHeaderProps {
 	fileName: string;
@@ -18,6 +18,7 @@ interface ChatHeaderProps {
 	onSearchToggle: () => void;
 	isSearchOpen: boolean;
 	onJumpToMessage: (index: number) => void;
+	dateMap: DateMapEntry[];
 }
 
 export default function ChatHeader({
@@ -29,6 +30,7 @@ export default function ChatHeader({
 	onSearchToggle,
 	isSearchOpen,
 	onJumpToMessage,
+	dateMap,
 }: ChatHeaderProps) {
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 	const calendarRef = useRef<HTMLDivElement>(null);
@@ -46,36 +48,6 @@ export default function ChatHeader({
 		document.addEventListener('mousedown', handleClickOutside);
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	}, []);
-
-	// Compute a map of Date strings -> first message index on that date for Calendar Jump
-	const dateMap = useMemo(() => {
-		const map: { dateStr: string; index: number; count: number }[] = [];
-		const seenDates: Record<string, number> = {}; // dateStr -> position in map array
-
-		for (let i = 0; i < messages.length; i++) {
-			const msg = messages[i];
-			if (!msg.timestamp) continue;
-
-			// Extract a nice readable date, e.g. "May 12, 2026" or "12/05/2026"
-			const dateStr = msg.timestamp.toLocaleDateString([], {
-				year: 'numeric',
-				month: 'short',
-				day: 'numeric',
-			});
-
-			if (seenDates[dateStr] !== undefined) {
-				map[seenDates[dateStr]].count++;
-			} else {
-				seenDates[dateStr] = map.length;
-				map.push({
-					dateStr,
-					index: i,
-					count: 1,
-				});
-			}
-		}
-		return map;
-	}, [messages]);
 
 	const displayName = fileName.replace(/\.[^/.]+$/, ''); // strip extension
 

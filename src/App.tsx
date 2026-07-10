@@ -5,7 +5,7 @@ import ParticipantSelector from './components/ParticipantSelector';
 import ChatHeader from './components/ChatHeader';
 import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
-import type { Message } from './types';
+import type { Message, DateMapEntry } from './types';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
 type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
@@ -13,6 +13,7 @@ type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
 export default function App() {
 	const [step, setStep] = useState<AppStep>('UPLOAD');
 	const [messages, setMessages] = useState<Message[]>([]);
+	const [dateMap, setDateMap] = useState<DateMapEntry[]>([]);
 	const [fileName, setFileName] = useState<string>('');
 	const [participants, setParticipants] = useState<string[]>([]);
 	const [senderCounts, setSenderCounts] = useState<Record<string, number>>({});
@@ -43,10 +44,21 @@ export default function App() {
 				type: 'progress' | 'complete' | 'error';
 				progress?: number;
 				messages?: Message[];
+				dateMap?: DateMapEntry[];
+				participants?: string[];
+				senderCounts?: Record<string, number>;
 				error?: string;
 			}>,
 		) => {
-			const { type, progress, messages: parsed, error } = e.data;
+			const {
+				type,
+				progress,
+				messages: parsed,
+				dateMap: parsedDateMap,
+				participants: parsedParticipants,
+				senderCounts: parsedSenderCounts,
+				error,
+			} = e.data;
 
 			if (type === 'progress' && typeof progress === 'number') {
 				setParseProgress(progress);
@@ -62,22 +74,12 @@ export default function App() {
 					return;
 				}
 
-				// Identify unique participants and message counts
-				const senders = new Set<string>();
-				const counts: Record<string, number> = {};
-
-				parsed.forEach((msg) => {
-					if (!msg.isSystem && msg.sender !== 'System') {
-						senders.add(msg.sender);
-						counts[msg.sender] = (counts[msg.sender] || 0) + 1;
-					}
-				});
-
-				const participantList = Array.from(senders);
+				const participantList = parsedParticipants || [];
 
 				setMessages(parsed);
+				setDateMap(parsedDateMap || []);
 				setParticipants(participantList);
-				setSenderCounts(counts);
+				setSenderCounts(parsedSenderCounts || {});
 				setFileName(name);
 
 				// If there are clear participants, let the user pick their own identity,
@@ -116,6 +118,7 @@ export default function App() {
 		) {
 			setStep('UPLOAD');
 			setMessages([]);
+			setDateMap([]);
 			setFileName('');
 			setParticipants([]);
 			setSenderCounts({});
@@ -257,6 +260,7 @@ export default function App() {
 							onSearchToggle={() => setIsSearchOpen(!isSearchOpen)}
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={handleJumpToMessage}
+							dateMap={dateMap}
 						/>
 
 						{/* Chat Area Content Workspace */}
