@@ -48,12 +48,13 @@ export default function ChatHeader({
 
 	const [isEditingName, setIsEditingName] = useState(false);
 	const displayName = fileName.replace(/\.[^/.]+$/, ''); // strip extension
-	const [editValue, setEditValue] = useState(displayName);
+	const [editValue, setEditValue] = useState('');
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	useEffect(() => {
+	const handleStartEditing = () => {
 		setEditValue(displayName);
-	}, [displayName]);
+		setIsEditingName(true);
+	};
 
 	useEffect(() => {
 		if (isEditingName && inputRef.current) {
@@ -136,7 +137,7 @@ export default function ChatHeader({
 							</h2>
 							<button
 								type="button"
-								onClick={() => setIsEditingName(true)}
+								onClick={handleStartEditing}
 								className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600 opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity focus:outline-none"
 								title="Rename chat log"
 							>
