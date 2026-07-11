@@ -76,7 +76,7 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
 				item.part.toLowerCase() === search.toLowerCase() ? (
 					<mark
 						key={item.id}
-						className="bg-amber-100 text-amber-900 rounded-[2px] font-medium px-0.5"
+						className="bg-star-surface-strong text-text-star-strong rounded-[2px] font-medium px-0.5"
 					>
 						{item.part}
 					</mark>
@@ -99,11 +99,11 @@ function MediaAttachment({
 	const getIcon = () => {
 		switch (type) {
 			case 'image':
-				return <Image className="w-5 h-5 text-emerald-600" />;
+				return <Image className="w-5 h-5 text-text-brand" />;
 			case 'video':
 				return <Film className="w-5 h-5 text-indigo-600" />;
 			case 'audio':
-				return <Music className="w-5 h-5 text-amber-600" />;
+				return <Music className="w-5 h-5 text-text-star" />;
 			case 'sticker':
 				return <Smile className="w-5 h-5 text-pink-600" />;
 			default:
@@ -127,15 +127,15 @@ function MediaAttachment({
 	};
 
 	return (
-		<div className="flex items-center gap-3 bg-neutral-50/80 border border-neutral-100 rounded-lg p-2.5 my-1.5 max-w-[260px] md:max-w-[320px]">
-			<div className="p-2 bg-white rounded-md shadow-sm shrink-0">
+		<div className="flex items-center gap-3 bg-surface-hover/80 border border-border-subtle rounded-lg p-2.5 my-1.5 max-w-[260px] md:max-w-[320px]">
+			<div className="p-2 bg-surface rounded-md shadow-sm shrink-0">
 				{getIcon()}
 			</div>
 			<div className="min-w-0">
-				<p className="font-sans font-medium text-xs text-neutral-800">
+				<p className="font-sans font-medium text-xs text-text-primary">
 					{getLabel()}
 				</p>
-				<p className="font-sans text-[11px] text-neutral-400 truncate">
+				<p className="font-sans text-[11px] text-text-muted truncate">
 					{content}
 				</p>
 			</div>
@@ -167,11 +167,11 @@ const MessageBubble = memo(function MessageBubble({
 				className="w-full flex justify-center my-1.5 focus:outline-none"
 				id={`message-${message.id}`}
 			>
-				<div className="max-w-[85%] bg-white/70 border border-neutral-100 text-neutral-500 font-sans text-[11px] md:text-xs py-1 px-3 rounded-lg shadow-sm text-center flex items-center gap-1.5 leading-relaxed">
-					<Info className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+				<div className="max-w-[85%] bg-surface/70 border border-border-subtle text-text-tertiary font-sans text-[11px] md:text-xs py-1 px-3 rounded-lg shadow-sm text-center flex items-center gap-1.5 leading-relaxed">
+					<Info className="w-3.5 h-3.5 text-text-muted shrink-0" />
 					<span>{message.content}</span>
 					{message.formattedTime && (
-						<span className="text-[9px] text-neutral-400 font-mono shrink-0 ml-1">
+						<span className="text-[9px] text-text-muted font-mono shrink-0 ml-1">
 							({message.formattedTime})
 						</span>
 					)}
@@ -188,11 +188,11 @@ const MessageBubble = memo(function MessageBubble({
 			<div
 				className={`max-w-[82%] md:max-w-[72%] rounded-2xl relative shadow-sm transition-all duration-500 ${
 					isMe
-						? 'bg-[#d9fdd3] border border-[#d1f4cb] text-[#111b21] rounded-tr-none'
-						: 'bg-white border border-neutral-100 text-[#111b21] rounded-tl-none'
+						? 'bg-surface-message-out border border-border-message-out text-text-primary rounded-tr-none'
+						: 'bg-surface border border-border-subtle text-text-primary rounded-tl-none'
 				} ${
 					isHighlighted
-						? 'ring-4 ring-amber-400 scale-[1.01] shadow-md z-10'
+						? 'ring-4 ring-star-surface scale-[1.01] shadow-md z-10'
 						: ''
 				}`}
 			>
@@ -221,14 +221,14 @@ const MessageBubble = memo(function MessageBubble({
 					)}
 
 					{/* Timestamp Footer */}
-					<div className="text-[10px] text-neutral-400 font-mono text-right mt-1 self-end leading-none select-none flex items-center gap-1.5 min-h-[16px]">
+					<div className="text-[10px] text-text-muted font-mono text-right mt-1 self-end leading-none select-none flex items-center gap-1.5 min-h-[16px]">
 						<button
 							type="button"
 							onClick={onToggleStar}
 							className={`p-0.5 rounded transition-all focus:outline-none ${
 								isStarred
-									? 'text-amber-500 hover:text-amber-600 scale-100'
-									: 'text-neutral-300 hover:text-amber-500 opacity-0 group-hover/msg:opacity-100 focus:opacity-100 hover:scale-110 cursor-pointer'
+									? 'text-text-star hover:text-text-star scale-100'
+									: 'text-border-strong hover:text-text-star opacity-0 group-hover/msg:opacity-100 focus:opacity-100 hover:scale-110 cursor-pointer'
 							}`}
 							title={isStarred ? 'Unstar message' : 'Star message'}
 						>
@@ -334,7 +334,7 @@ const MessageChunk = memo(function MessageChunk({
 				style={{ height: `${estimatedHeight}px` }}
 				className="w-full flex items-center justify-center py-8"
 			>
-				<Loader2 className="w-6 h-6 text-neutral-400 animate-spin" />
+				<Loader2 className="w-6 h-6 text-text-muted animate-spin" />
 			</div>
 		);
 	}
@@ -503,7 +503,7 @@ export default function VirtualMessageList({
 	};
 
 	return (
-		<div className="relative flex-1 bg-[#efeae2] overflow-hidden flex flex-col h-full">
+		<div className="relative flex-1 bg-surface-canvas overflow-hidden flex flex-col h-full">
 			{/* Decorative WhatsApp Background Pattern overlay */}
 			<div
 				className="absolute inset-0 opacity-[0.06] pointer-events-none"
@@ -547,7 +547,7 @@ export default function VirtualMessageList({
 				<button
 					type="button"
 					onClick={scrollToBottom}
-					className="absolute bottom-6 right-6 w-11 h-11 bg-white hover:bg-neutral-50 border border-neutral-100 rounded-full shadow-lg flex items-center justify-center text-neutral-500 hover:text-neutral-700 transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 touch-manipulation z-20"
+					className="absolute bottom-6 right-6 w-11 h-11 bg-surface hover:bg-surface-hover border border-border-subtle rounded-full shadow-lg flex items-center justify-center text-text-tertiary hover:text-text-primary transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-ring-brand touch-manipulation z-20"
 				>
 					<ChevronDown className="w-5 h-5 animate-bounce" />
 				</button>

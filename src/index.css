@@ -4,6 +4,108 @@
 	--font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 	--font-display: "Space Grotesk", sans-serif;
 	--font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+	--color-surface: var(--surface-base);
+	--color-surface-hover: var(--surface-hover);
+	--color-surface-active: var(--surface-active);
+	--color-surface-muted: var(--surface-muted);
+	--color-surface-muted-hover: var(--surface-muted-hover);
+	--color-surface-canvas: var(--surface-canvas);
+	--color-surface-backdrop: var(--surface-backdrop);
+	--color-surface-message-in: var(--surface-message-in);
+	--color-surface-message-in-alpha: var(--surface-message-in-alpha);
+	--color-surface-message-out: var(--surface-message-out);
+
+	--color-brand: var(--brand-base);
+	--color-brand-hover: var(--brand-hover);
+	--color-brand-surface: var(--brand-surface);
+	--color-brand-surface-hover: var(--brand-surface-hover);
+
+	--color-error: var(--error-base);
+	--color-error-surface: var(--error-surface);
+
+	--color-star: var(--star-base);
+	--color-star-surface: var(--star-surface);
+	--color-star-surface-strong: var(--star-surface-strong);
+
+	--color-text-primary: var(--text-primary);
+	--color-text-secondary: var(--text-secondary);
+	--color-text-tertiary: var(--text-tertiary);
+	--color-text-muted: var(--text-muted);
+	--color-text-inverse: var(--text-inverse);
+
+	--color-text-brand: var(--text-brand);
+	--color-text-brand-hover: var(--text-brand-hover);
+
+	--color-text-error: var(--text-error);
+
+	--color-text-star: var(--text-star);
+	--color-text-star-strong: var(--text-star-strong);
+
+	--color-border-subtle: var(--border-subtle);
+	--color-border-base: var(--border-base);
+	--color-border-strong: var(--border-strong);
+
+	--color-border-brand: var(--border-brand);
+	--color-border-error: var(--border-error);
+
+	--color-border-message-in: var(--border-message-in);
+	--color-border-message-out: var(--border-message-out);
+
+	--color-ring-brand: var(--ring-brand);
+	--color-ring-base: var(--ring-base);
+}
+
+:root {
+	--surface-base: var(--color-white);
+	--surface-hover: var(--color-neutral-50);
+	--surface-active: var(--color-neutral-100);
+	--surface-muted: var(--color-neutral-100);
+	--surface-muted-hover: var(--color-neutral-200);
+	--surface-canvas: #efeae2;
+	--surface-backdrop: var(--color-neutral-50);
+	--surface-message-in: var(--color-white);
+	--surface-message-in-alpha: color-mix(in srgb, var(--color-white) 70%, transparent);
+	--surface-message-out: #d9fdd3;
+
+	--brand-base: var(--color-emerald-600);
+	--brand-hover: var(--color-emerald-700);
+	--brand-surface: var(--color-emerald-50);
+	--brand-surface-hover: var(--color-emerald-100);
+
+	--error-base: var(--color-red-600);
+	--error-surface: var(--color-red-50);
+
+	--star-base: var(--color-amber-500);
+	--star-surface: var(--color-amber-50);
+	--star-surface-strong: var(--color-amber-100);
+
+	--text-primary: var(--color-neutral-800);
+	--text-secondary: var(--color-neutral-600);
+	--text-tertiary: var(--color-neutral-500);
+	--text-muted: var(--color-neutral-400);
+	--text-inverse: var(--color-white);
+
+	--text-brand: var(--color-emerald-600);
+	--text-brand-hover: var(--color-emerald-700);
+
+	--text-error: var(--color-red-600);
+
+	--text-star: var(--color-amber-600);
+	--text-star-strong: var(--color-amber-900);
+
+	--border-subtle: var(--color-neutral-100);
+	--border-base: var(--color-neutral-200);
+	--border-strong: var(--color-neutral-300);
+
+	--border-brand: var(--color-emerald-500);
+	--border-error: var(--color-red-100);
+
+	--border-message-in: var(--color-neutral-100);
+	--border-message-out: #d1f4cb;
+
+	--ring-brand: var(--color-emerald-500);
+	--ring-base: var(--color-neutral-300);
 }
 
 /* Custom Scrollbar styling */

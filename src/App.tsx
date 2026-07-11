@@ -286,7 +286,7 @@ export default function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#fafaf9] flex flex-col antialiased selection:bg-emerald-100 selection:text-emerald-900">
+		<div className="min-h-screen bg-[#fafaf9] flex flex-col antialiased selection:bg-brand-surface-hover selection:text-text-brand-hover">
 			<AnimatePresence mode="wait">
 				{isParsing && (
 					<motion.div
@@ -297,21 +297,21 @@ export default function App() {
 						transition={{ duration: 0.25, ease: 'easeOut' }}
 						className="flex-1 flex flex-col justify-center items-center py-12 px-4 max-w-xl mx-auto w-full"
 					>
-						<div className="w-full bg-white rounded-2xl border border-neutral-200/60 p-8 md:p-12 text-center shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-							<div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-50 rounded-full blur-3xl opacity-70 pointer-events-none" />
-							<div className="absolute -left-10 -bottom-10 w-40 h-40 bg-teal-50 rounded-full blur-3xl opacity-70 pointer-events-none" />
+						<div className="w-full bg-surface rounded-2xl border border-border-base/60 p-8 md:p-12 text-center shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
+							<div className="absolute -right-10 -top-10 w-40 h-40 bg-brand-surface rounded-full blur-3xl opacity-70 pointer-events-none" />
+							<div className="absolute -left-10 -bottom-10 w-40 h-40 bg-surface-hover rounded-full blur-3xl opacity-70 pointer-events-none" />
 
 							<div className="relative mb-6">
-								<div className="p-4 bg-emerald-50 text-emerald-600 rounded-full inline-flex relative z-10 animate-pulse">
+								<div className="p-4 bg-brand-surface text-text-brand rounded-full inline-flex relative z-10 animate-pulse">
 									<Loader2 className="w-8 h-8 animate-spin" />
 								</div>
-								<div className="absolute inset-0 bg-emerald-100 rounded-full blur-md opacity-50 scale-125" />
+								<div className="absolute inset-0 bg-brand-surface-hover rounded-full blur-md opacity-50 scale-125" />
 							</div>
 
-							<h2 className="font-display text-2xl font-semibold text-neutral-900 mb-2">
+							<h2 className="font-display text-2xl font-semibold text-text-primary mb-2">
 								Analyzing Chat Log
 							</h2>
-							<p className="text-neutral-500 font-sans text-sm md:text-base max-w-sm mb-8 leading-relaxed">
+							<p className="text-text-tertiary font-sans text-sm md:text-base max-w-sm mb-8 leading-relaxed">
 								{parseProgress !== null &&
 									parseProgress < 35 &&
 									'Reading file structure...'}
@@ -328,14 +328,14 @@ export default function App() {
 
 							<div className="w-full max-w-md mb-3">
 								<div className="flex justify-between items-center mb-2">
-									<span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider font-sans">
+									<span className="text-xs font-semibold text-text-muted uppercase tracking-wider font-sans">
 										Parsing Progress
 									</span>
-									<span className="text-sm font-bold font-mono text-emerald-600">
+									<span className="text-sm font-bold font-mono text-text-brand">
 										{parseProgress ?? 0}%
 									</span>
 								</div>
-								<div className="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden border border-neutral-200/50">
+								<div className="w-full h-2.5 bg-surface-active rounded-full overflow-hidden border border-border-base/50">
 									<motion.div
 										className="h-full bg-linear-to-r from-emerald-500 to-teal-500 rounded-full"
 										initial={{ width: 0 }}
@@ -345,8 +345,8 @@ export default function App() {
 								</div>
 							</div>
 
-							<div className="mt-8 pt-6 border-t border-neutral-100 w-full flex items-center justify-center gap-2 text-xs text-neutral-400 font-sans">
-								<ShieldCheck className="w-4 h-4 text-emerald-500" />
+							<div className="mt-8 pt-6 border-t border-border-subtle w-full flex items-center justify-center gap-2 text-xs text-text-muted font-sans">
+								<ShieldCheck className="w-4 h-4 text-text-brand" />
 								<span>Parsed 100% offline & secure in your browser.</span>
 							</div>
 						</div>
@@ -491,8 +491,8 @@ export default function App() {
 								</>
 							) : (
 								<div className="flex flex-col items-center justify-center gap-3 py-12">
-									<Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
-									<p className="text-neutral-500 font-sans text-sm font-medium animate-pulse">
+									<Loader2 className="w-10 h-10 text-text-brand animate-spin" />
+									<p className="text-text-tertiary font-sans text-sm font-medium animate-pulse">
 										Loading conversation...
 									</p>
 								</div>
