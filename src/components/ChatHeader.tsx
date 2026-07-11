@@ -98,7 +98,7 @@ export default function ChatHeader({
 	}, []);
 
 	return (
-		<header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-30">
+		<header className="fixed top-0 left-0 right-0 bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-50 h-16">
 			<div className="flex items-center gap-3 min-w-0">
 				<button
 					type="button"

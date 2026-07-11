@@ -402,7 +402,7 @@ export default function App() {
 								setIsConversationReady(true);
 							}
 						}}
-						className="flex-1 flex flex-col h-screen overflow-hidden"
+						className="flex-1 flex flex-col h-dvh overflow-hidden pt-16"
 					>
 						<ChatHeader
 							fileName={fileName}
