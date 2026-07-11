@@ -302,33 +302,71 @@ export default function VirtualMessageList({
 		setShowScrollBottom(isUp);
 	};
 
-	// Scroll to target index
+	// Handle scroll jump and highlight
 	useEffect(() => {
 		if (jumpToIndex !== null) {
+			const targetMessage = messages[jumpToIndex];
+
+			// Scroll virtualizer to the index (force render it)
 			rowVirtualizer.scrollToIndex(jumpToIndex, {
 				align: 'center',
 				behavior: 'auto',
 			});
 
-			const chunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
-			onLoadChunk(chunkIndex);
-		}
-	}, [jumpToIndex, onLoadChunk, rowVirtualizer]);
-
-	// Highlight target index once the message data is loaded
-	useEffect(() => {
-		if (jumpToIndex !== null) {
-			const targetMessage = messages[jumpToIndex];
-			if (targetMessage) {
-				setHighlightedId(targetMessage.id);
-				const timer = setTimeout(() => {
-					setHighlightedId(null);
-				}, 3000);
-				onJumpDone();
-				return () => clearTimeout(timer);
+			if (!targetMessage) {
+				// Message data is not loaded yet; load the chunk and wait
+				const chunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
+				onLoadChunk(chunkIndex);
+				return;
 			}
+
+			let timeoutId: ReturnType<typeof setTimeout> | undefined;
+			let flashTimer: ReturnType<typeof setTimeout> | undefined;
+
+			// Try to scroll and highlight after the DOM updates
+			const tryScrollAndHighlight = () => {
+				const el = document.getElementById(`message-${targetMessage.id}`);
+				if (el) {
+					el.scrollIntoView({ block: 'center', behavior: 'auto' });
+					setHighlightedId(targetMessage.id);
+					flashTimer = setTimeout(() => {
+						setHighlightedId(null);
+					}, 3000);
+					onJumpDone();
+					return true;
+				}
+				return false;
+			};
+
+			// Try in the next frame
+			const rafId = requestAnimationFrame(() => {
+				if (tryScrollAndHighlight()) return;
+
+				// If not found, call scrollToIndex again (in case layout shifted) and retry in 60ms
+				rowVirtualizer.scrollToIndex(jumpToIndex, {
+					align: 'center',
+					behavior: 'auto',
+				});
+
+				timeoutId = setTimeout(() => {
+					if (!tryScrollAndHighlight()) {
+						// Fallback: still highlight and end the jump if we can't scroll
+						setHighlightedId(targetMessage.id);
+						flashTimer = setTimeout(() => {
+							setHighlightedId(null);
+						}, 3000);
+						onJumpDone();
+					}
+				}, 60);
+			});
+
+			return () => {
+				cancelAnimationFrame(rafId);
+				if (timeoutId) clearTimeout(timeoutId);
+				if (flashTimer) clearTimeout(flashTimer);
+			};
 		}
-	}, [jumpToIndex, messages, onJumpDone]);
+	}, [jumpToIndex, messages, onLoadChunk, onJumpDone, rowVirtualizer]);
 
 	const scrollToBottom = () => {
 		if (parentRef.current) {
