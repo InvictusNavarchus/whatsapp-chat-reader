@@ -7,6 +7,7 @@ import {
 	useCallback,
 	useMemo,
 } from 'react';
+import { DB_CHUNK_SIZE } from '../utils/db';
 // UI render chunk size — tuned for viewport coverage (~2 screens worth of messages).
 // Intentionally separate from DB_CHUNK_SIZE (500) which is an IndexedDB IO concern.
 const RENDER_CHUNK_SIZE = 30;
@@ -385,14 +386,18 @@ export default function VirtualMessageList({
 	>(null);
 	const [chunkHeights, setChunkHeights] = useState<Record<number, number>>({});
 
-	// Split messages into chunk groups
+	// Split messages into render chunk groups.
+	// Each chunk also carries its startIndex so we can translate to a DB chunk index
+	// when onLoadChunk fires (render index ≠ DB index since RENDER_CHUNK_SIZE ≠ DB_CHUNK_SIZE).
 	const chunks = useMemo(() => {
-		const result: { id: string; messages: Message[] }[] = [];
+		const result: { id: string; messages: Message[]; startIndex: number }[] =
+			[];
 		let chunkIndex = 0;
 		for (let i = 0; i < messages.length; i += RENDER_CHUNK_SIZE) {
 			result.push({
 				id: `chunk-${chunkIndex}`,
 				messages: messages.slice(i, i + RENDER_CHUNK_SIZE),
+				startIndex: i,
 			});
 			chunkIndex++;
 		}
@@ -526,7 +531,12 @@ export default function VirtualMessageList({
 						onMeasured={handleChunkMeasured}
 						cachedHeight={chunkHeights[index] ?? null}
 						highlightedId={highlightedId}
-						onLoadChunk={onLoadChunk}
+						// Translate render chunk index → DB chunk index before forwarding.
+						// MessageChunk only knows its render-level index; the parent (useChunkedMessages)
+						// expects a DB_CHUNK_SIZE-based index. These differ because RENDER_CHUNK_SIZE ≠ DB_CHUNK_SIZE.
+						onLoadChunk={() =>
+							onLoadChunk(Math.floor(chunk.startIndex / DB_CHUNK_SIZE))
+						}
 					/>
 				))}
 			</div>
