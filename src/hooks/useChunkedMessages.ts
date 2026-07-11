@@ -42,9 +42,11 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 	// Mark a chunk to be loaded
 	const loadChunk = useCallback(
 		(index: number) => {
-			setLoadedChunks(new Set([...loadedChunks, index]));
+			const currentChunks = useChatStore.getState().loadedChunks;
+			if (currentChunks.has(index)) return;
+			setLoadedChunks(new Set([...currentChunks, index]));
 		},
-		[loadedChunks, setLoadedChunks],
+		[setLoadedChunks],
 	);
 
 	// Background prefetching of unloaded message chunks.

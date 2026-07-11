@@ -247,6 +247,7 @@ const MessageBubble = memo(function MessageBubble({
 
 interface MessageChunkProps {
 	chunkIndex: number;
+	dbChunkIndex: number;
 	messages: Message[];
 	me: string | null;
 	searchQuery: string;
@@ -261,6 +262,7 @@ interface MessageChunkProps {
 
 const MessageChunk = memo(function MessageChunk({
 	chunkIndex,
+	dbChunkIndex,
 	messages,
 	me,
 	searchQuery,
@@ -309,9 +311,9 @@ const MessageChunk = memo(function MessageChunk({
 	// Load chunk when it comes into view (or is force rendered) and its messages are empty/undefined
 	useEffect(() => {
 		if (isMounted && isEmpty) {
-			onLoadChunk(chunkIndex);
+			onLoadChunk(dbChunkIndex);
 		}
-	}, [isMounted, isEmpty, chunkIndex, onLoadChunk]);
+	}, [isMounted, isEmpty, dbChunkIndex, onLoadChunk]);
 
 	if (!isMounted) {
 		return (
@@ -518,27 +520,26 @@ export default function VirtualMessageList({
 				className="flex-1 overflow-y-auto relative py-4 focus:outline-none scrollbar-thin scrollbar-thumb-neutral-300"
 				style={{ overflowAnchor: 'auto' }}
 			>
-				{chunks.map((chunk, index) => (
-					<MessageChunk
-						key={chunk.id}
-						chunkIndex={index}
-						messages={chunk.messages}
-						me={me}
-						searchQuery={searchQuery}
-						starredMessageIds={starredMessageIds}
-						onToggleStarMessage={onToggleStarMessage}
-						isForceRendered={forceRenderChunkIndex === index}
-						onMeasured={handleChunkMeasured}
-						cachedHeight={chunkHeights[index] ?? null}
-						highlightedId={highlightedId}
-						// Translate render chunk index → DB chunk index before forwarding.
-						// MessageChunk only knows its render-level index; the parent (useChunkedMessages)
-						// expects a DB_CHUNK_SIZE-based index. These differ because RENDER_CHUNK_SIZE ≠ DB_CHUNK_SIZE.
-						onLoadChunk={() =>
-							onLoadChunk(Math.floor(chunk.startIndex / DB_CHUNK_SIZE))
-						}
-					/>
-				))}
+				{chunks.map((chunk, index) => {
+					const dbChunkIndex = Math.floor(chunk.startIndex / DB_CHUNK_SIZE);
+					return (
+						<MessageChunk
+							key={chunk.id}
+							chunkIndex={index}
+							dbChunkIndex={dbChunkIndex}
+							messages={chunk.messages}
+							me={me}
+							searchQuery={searchQuery}
+							starredMessageIds={starredMessageIds}
+							onToggleStarMessage={onToggleStarMessage}
+							isForceRendered={forceRenderChunkIndex === index}
+							onMeasured={handleChunkMeasured}
+							cachedHeight={chunkHeights[index] ?? null}
+							highlightedId={highlightedId}
+							onLoadChunk={onLoadChunk}
+						/>
+					);
+				})}
 			</div>
 
 			{/* Floating Scroll-to-Bottom Widget */}
