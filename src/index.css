@@ -8,7 +8,6 @@
 	--color-surface: var(--surface-base);
 	--color-surface-hover: var(--surface-hover);
 	--color-surface-active: var(--surface-active);
-	--color-surface-muted: var(--surface-muted);
 	--color-surface-muted-hover: var(--surface-muted-hover);
 	--color-surface-canvas: var(--surface-canvas);
 	--color-surface-backdrop: var(--surface-backdrop);
@@ -41,6 +40,11 @@
 
 	--color-text-star: var(--text-star);
 	--color-text-star-strong: var(--text-star-strong);
+	--color-text-video: var(--text-video);
+	--color-text-sticker: var(--text-sticker);
+	--color-text-document: var(--text-document);
+
+	--color-icon-muted: var(--icon-muted);
 
 	--color-border-subtle: var(--border-subtle);
 	--color-border-base: var(--border-base);
@@ -60,13 +64,16 @@
 	--surface-base: var(--color-white);
 	--surface-hover: var(--color-neutral-50);
 	--surface-active: var(--color-neutral-100);
-	--surface-muted: var(--color-neutral-100);
 	--surface-muted-hover: var(--color-neutral-200);
-	--surface-canvas: #efeae2;
+	--surface-canvas: #efeae2; /* WhatsApp light-mode specific, needs dark-mode override later */
 	--surface-backdrop: var(--color-neutral-50);
 	--surface-message-in: var(--color-white);
-	--surface-message-in-alpha: color-mix(in srgb, var(--color-white) 70%, transparent);
-	--surface-message-out: #d9fdd3;
+	--surface-message-in-alpha: color-mix(
+		in srgb,
+		var(--color-white) 70%,
+		transparent
+	);
+	--surface-message-out: #d9fdd3; /* WhatsApp light-mode specific, needs dark-mode override later */
 
 	--brand-base: var(--color-emerald-600);
 	--brand-hover: var(--color-emerald-700);
@@ -83,7 +90,9 @@
 	--text-primary: var(--color-neutral-800);
 	--text-secondary: var(--color-neutral-600);
 	--text-tertiary: var(--color-neutral-500);
-	--text-muted: var(--color-neutral-400);
+	--text-muted: var(
+		--color-neutral-500
+	); /* Darkened to pass WCAG AA accessibility contrast check */
 	--text-inverse: var(--color-white);
 
 	--text-brand: var(--color-emerald-600);
@@ -93,16 +102,23 @@
 
 	--text-star: var(--color-amber-600);
 	--text-star-strong: var(--color-amber-900);
+	--text-video: var(--color-indigo-600);
+	--text-sticker: var(--color-pink-600);
+	--text-document: var(--color-blue-600);
+
+	--icon-muted: var(--color-neutral-300);
 
 	--border-subtle: var(--color-neutral-100);
 	--border-base: var(--color-neutral-200);
 	--border-strong: var(--color-neutral-300);
 
 	--border-brand: var(--color-emerald-500);
-	--border-error: var(--color-red-100);
+	--border-error: var(
+		--color-red-200
+	); /* Darkened to red-200 for better visibility against error surface (red-50) */
 
 	--border-message-in: var(--color-neutral-100);
-	--border-message-out: #d1f4cb;
+	--border-message-out: #d1f4cb; /* WhatsApp light-mode specific, needs dark-mode override later */
 
 	--ring-brand: var(--color-emerald-500);
 	--ring-base: var(--color-neutral-300);

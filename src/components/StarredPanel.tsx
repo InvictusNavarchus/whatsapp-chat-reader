@@ -26,7 +26,7 @@ export default function StarredPanel({
 			{/* Header */}
 			<div className="p-4 border-b border-border-base flex items-center justify-between shrink-0">
 				<h3 className="font-sans font-semibold text-text-primary text-sm md:text-base flex items-center gap-2">
-					<Star className="w-4 h-4 text-text-star fill-amber-500" />
+					<Star className="w-4 h-4 text-text-star fill-star" />
 					Starred Messages
 				</h3>
 				<button
@@ -42,7 +42,7 @@ export default function StarredPanel({
 			<div className="flex-1 overflow-y-auto scrollbar-thin">
 				{starredMessages.length === 0 ? (
 					<div className="p-8 text-center text-text-muted">
-						<Star className="w-10 h-10 mx-auto mb-3 text-border-base" />
+						<Star className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">No Starred Messages</p>
 						<p className="font-sans text-xs mt-1">
 							Hover over any message in the chat and click the star icon to save
@@ -110,7 +110,7 @@ export default function StarredPanel({
 											className="absolute right-4 top-4 p-1.5 hover:bg-surface-active text-text-star hover:text-text-muted rounded-lg transition-colors focus:outline-none"
 											title="Unstar message"
 										>
-											<Star className="w-4 h-4 fill-amber-500" />
+											<Star className="w-4 h-4 fill-star" />
 										</button>
 									</div>
 								);

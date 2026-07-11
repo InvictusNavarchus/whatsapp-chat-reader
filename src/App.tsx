@@ -286,7 +286,7 @@ export default function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#fafaf9] flex flex-col antialiased selection:bg-brand-surface-hover selection:text-text-brand-hover">
+		<div className="min-h-screen bg-surface-backdrop flex flex-col antialiased selection:bg-brand-surface-hover selection:text-text-brand-hover">
 			<AnimatePresence mode="wait">
 				{isParsing && (
 					<motion.div

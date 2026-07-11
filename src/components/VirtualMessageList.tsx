@@ -101,13 +101,13 @@ function MediaAttachment({
 			case 'image':
 				return <Image className="w-5 h-5 text-text-brand" />;
 			case 'video':
-				return <Film className="w-5 h-5 text-indigo-600" />;
+				return <Film className="w-5 h-5 text-text-video" />;
 			case 'audio':
 				return <Music className="w-5 h-5 text-text-star" />;
 			case 'sticker':
-				return <Smile className="w-5 h-5 text-pink-600" />;
+				return <Smile className="w-5 h-5 text-text-sticker" />;
 			default:
-				return <FileText className="w-5 h-5 text-blue-600" />;
+				return <FileText className="w-5 h-5 text-text-document" />;
 		}
 	};
 
@@ -189,7 +189,7 @@ const MessageBubble = memo(function MessageBubble({
 				className={`max-w-[82%] md:max-w-[72%] rounded-2xl relative shadow-sm transition-all duration-500 ${
 					isMe
 						? 'bg-surface-message-out border border-border-message-out text-text-primary rounded-tr-none'
-						: 'bg-surface border border-border-subtle text-text-primary rounded-tl-none'
+						: 'bg-surface-message-in border border-border-message-in text-text-primary rounded-tl-none'
 				} ${
 					isHighlighted
 						? 'ring-4 ring-star-surface scale-[1.01] shadow-md z-10'
@@ -232,9 +232,7 @@ const MessageBubble = memo(function MessageBubble({
 							}`}
 							title={isStarred ? 'Unstar message' : 'Star message'}
 						>
-							<Star
-								className={`w-3.5 h-3.5 ${isStarred ? 'fill-amber-500' : ''}`}
-							/>
+							<Star className={`w-3.5 h-3.5 ${isStarred ? 'fill-star' : ''}`} />
 						</button>
 						{message.isEdited && <span>Edited</span>}
 						<span>{message.formattedTime}</span>

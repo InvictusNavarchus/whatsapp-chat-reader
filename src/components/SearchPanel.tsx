@@ -129,7 +129,7 @@ export default function SearchPanel({
 			<div className="flex-1 overflow-y-auto scrollbar-thin">
 				{searchQuery.trim().length < 2 ? (
 					<div className="p-8 text-center text-text-muted">
-						<MessageSquare className="w-10 h-10 mx-auto mb-3 text-border-base" />
+						<MessageSquare className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">Search History</p>
 						<p className="font-sans text-xs mt-1">
 							Enter a keyword above to find conversations instantly.
@@ -137,7 +137,7 @@ export default function SearchPanel({
 					</div>
 				) : matches.length === 0 ? (
 					<div className="p-8 text-center text-text-muted">
-						<X className="w-10 h-10 mx-auto mb-3 text-border-base" />
+						<X className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">No results found</p>
 						<p className="font-sans text-xs mt-1">
 							No messages match "{searchQuery}" in this chat.
