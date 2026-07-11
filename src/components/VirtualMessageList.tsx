@@ -7,7 +7,9 @@ import {
 	useCallback,
 	useMemo,
 } from 'react';
-import { DB_CHUNK_SIZE } from '../utils/db';
+// UI render chunk size — tuned for viewport coverage (~2 screens worth of messages).
+// Intentionally separate from DB_CHUNK_SIZE (500) which is an IndexedDB IO concern.
+const RENDER_CHUNK_SIZE = 30;
 import {
 	ChevronDown,
 	Image,
@@ -387,10 +389,10 @@ export default function VirtualMessageList({
 	const chunks = useMemo(() => {
 		const result: { id: string; messages: Message[] }[] = [];
 		let chunkIndex = 0;
-		for (let i = 0; i < messages.length; i += DB_CHUNK_SIZE) {
+		for (let i = 0; i < messages.length; i += RENDER_CHUNK_SIZE) {
 			result.push({
 				id: `chunk-${chunkIndex}`,
-				messages: messages.slice(i, i + DB_CHUNK_SIZE),
+				messages: messages.slice(i, i + RENDER_CHUNK_SIZE),
 			});
 			chunkIndex++;
 		}
@@ -427,7 +429,7 @@ export default function VirtualMessageList({
 			const targetMessage = messages[jumpToIndex];
 			if (!targetMessage) return;
 
-			const targetChunkIndex = Math.floor(jumpToIndex / DB_CHUNK_SIZE);
+			const targetChunkIndex = Math.floor(jumpToIndex / RENDER_CHUNK_SIZE);
 			console.log(
 				'Jumping to index:',
 				jumpToIndex,
