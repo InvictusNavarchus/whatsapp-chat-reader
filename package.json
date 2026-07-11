@@ -27,7 +27,6 @@
 		"motion": "^12.42.2",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
-		"vite": "^6.2.3",
 		"zustand": "^5.0.14"
 	},
 	"devDependencies": {
