@@ -89,7 +89,7 @@
 
 	--text-primary: var(--color-neutral-800);
 	--text-secondary: var(--color-neutral-600);
-	--text-tertiary: var(--color-neutral-500);
+	--text-tertiary: var(--color-neutral-600);
 	--text-muted: var(
 		--color-neutral-500
 	); /* Darkened to pass WCAG AA accessibility contrast check */
