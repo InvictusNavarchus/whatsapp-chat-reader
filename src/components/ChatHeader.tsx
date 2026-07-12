@@ -99,12 +99,12 @@ export default function ChatHeader({
 	}, []);
 
 	return (
-		<header className="fixed top-0 left-0 right-0 bg-white border-b border-neutral-200 px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-50 h-16">
+		<header className="fixed top-0 left-0 right-0 bg-surface border-b border-border-base px-4 py-3 flex items-center justify-between shadow-sm shrink-0 z-50 h-16">
 			<div className="flex items-center gap-3 min-w-0">
 				<button
 					type="button"
 					onClick={onBack}
-					className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-500 hover:text-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 shrink-0 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
+					className="p-1.5 hover:bg-surface-active rounded-lg text-text-tertiary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-ring-brand shrink-0 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
 					title="Back to file upload"
 				>
 					<ArrowLeft className="w-5 h-5" />
@@ -120,32 +120,32 @@ export default function ChatHeader({
 								onChange={(e) => setEditValue(e.target.value)}
 								onBlur={handleSaveName}
 								onKeyDown={handleKeyDown}
-								className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 max-w-[180px] md:max-w-xs"
+								className="font-sans font-semibold text-text-primary text-sm md:text-base leading-tight bg-surface-hover border border-border-strong rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-ring-brand focus:border-border-brand max-w-[180px] md:max-w-xs"
 							/>
 							<button
 								type="button"
 								onClick={handleSaveName}
-								className="p-1 hover:bg-emerald-50 text-emerald-600 rounded"
+								className="p-1 hover:bg-brand-surface text-text-brand rounded"
 							>
 								<Check className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					) : (
 						<div className="flex items-center gap-1.5 group/title">
-							<h2 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate max-w-[180px] md:max-w-xs">
+							<h2 className="font-sans font-semibold text-text-primary text-sm md:text-base leading-tight truncate max-w-[180px] md:max-w-xs">
 								{displayName}
 							</h2>
 							<button
 								type="button"
 								onClick={handleStartEditing}
-								className="p-1 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600 opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity focus:outline-none"
+								className="p-1 hover:bg-surface-active rounded text-text-muted hover:text-text-secondary opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity focus:outline-none"
 								title="Rename chat log"
 							>
 								<Pencil className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					)}
-					<p className="text-neutral-400 font-sans text-[11px] leading-tight flex items-center gap-2 truncate mt-0.5">
+					<p className="text-text-muted font-sans text-[11px] leading-tight flex items-center gap-2 truncate mt-0.5">
 						<span className="flex items-center gap-0.5">
 							<Users className="w-3 h-3" />
 							{participants.length} participants
@@ -159,7 +159,7 @@ export default function ChatHeader({
 						<button
 							type="button"
 							onClick={onChangeIdentity}
-							className="text-emerald-600 hover:text-emerald-700 font-medium truncate hover:underline focus:outline-none flex items-center gap-0.5 cursor-pointer"
+							className="text-text-brand hover:text-text-brand-hover font-medium truncate hover:underline focus:outline-none flex items-center gap-0.5 cursor-pointer"
 							title="Change who 'Me' is"
 						>
 							{me ? `Me: ${me}` : 'Set "Me" identity'}
@@ -176,10 +176,10 @@ export default function ChatHeader({
 						<button
 							type="button"
 							onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-							className={`p-2 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
+							className={`p-2 hover:bg-surface-active rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
 								isCalendarOpen
-									? 'text-emerald-600 bg-emerald-50'
-									: 'text-neutral-500 hover:text-neutral-700'
+									? 'text-text-brand bg-brand-surface'
+									: 'text-text-tertiary hover:text-text-primary'
 							}`}
 							title="Jump to date"
 						>
@@ -187,15 +187,15 @@ export default function ChatHeader({
 						</button>
 
 						{isCalendarOpen && (
-							<div className="absolute right-0 mt-2 w-64 max-h-[320px] bg-white border border-neutral-200 rounded-xl shadow-xl overflow-hidden flex flex-col z-50">
-								<div className="px-3.5 py-2 border-b border-neutral-100 bg-neutral-50 flex items-center justify-between shrink-0">
-									<span className="font-sans font-medium text-xs text-neutral-700">
+							<div className="absolute right-0 mt-2 w-64 max-h-[320px] bg-surface border border-border-base rounded-xl shadow-xl overflow-hidden flex flex-col z-50">
+								<div className="px-3.5 py-2 border-b border-border-subtle bg-surface-hover flex items-center justify-between shrink-0">
+									<span className="font-sans font-medium text-xs text-text-primary">
 										Chronological Jump
 									</span>
 									<button
 										type="button"
 										onClick={() => setIsCalendarOpen(false)}
-										className="p-1 text-neutral-400 hover:text-neutral-600 rounded"
+										className="p-1 text-text-muted hover:text-text-secondary rounded"
 									>
 										<X className="w-3.5 h-3.5" />
 									</button>
@@ -209,10 +209,10 @@ export default function ChatHeader({
 												onJumpToMessage(d.index);
 												setIsCalendarOpen(false);
 											}}
-											className="w-full text-left px-4 py-2.5 hover:bg-neutral-50 text-neutral-800 text-xs font-sans transition-colors flex items-center justify-between focus:outline-none focus:bg-neutral-50"
+											className="w-full text-left px-4 py-2.5 hover:bg-surface-hover text-text-primary text-xs font-sans transition-colors flex items-center justify-between focus:outline-none focus:bg-surface-hover"
 										>
 											<span className="font-medium">{d.dateStr}</span>
-											<span className="font-mono text-[10px] text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded-md">
+											<span className="font-mono text-[10px] text-text-muted bg-surface-active px-1.5 py-0.5 rounded-md">
 												{d.count} msgs
 											</span>
 										</button>
@@ -227,10 +227,10 @@ export default function ChatHeader({
 				<button
 					type="button"
 					onClick={onStarredToggle}
-					className={`p-2 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
+					className={`p-2 hover:bg-surface-active rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
 						isStarredOpen
-							? 'text-amber-600 bg-amber-50'
-							: 'text-neutral-500 hover:text-neutral-700'
+							? 'text-text-star bg-star-surface'
+							: 'text-text-tertiary hover:text-text-primary'
 					}`}
 					title="Starred messages"
 				>
@@ -241,10 +241,10 @@ export default function ChatHeader({
 				<button
 					type="button"
 					onClick={onSearchToggle}
-					className={`p-2 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
+					className={`p-2 hover:bg-surface-active rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center ${
 						isSearchOpen
-							? 'text-emerald-600 bg-emerald-50'
-							: 'text-neutral-500 hover:text-neutral-700'
+							? 'text-text-brand bg-brand-surface'
+							: 'text-text-tertiary hover:text-text-primary'
 					}`}
 					title="Search messages"
 				>
