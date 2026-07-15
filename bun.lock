@@ -22,7 +22,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.5.3",
         "@cloudflare/vite-plugin": "^1.44.0",
-        "@navarchus/cf-headers": "^0.2.1",
+        "@navarchus/cf-headers": "^0.3.0",
         "@types/express": "^5.0.6",
         "@types/node": "^26.1.1",
         "@types/react": "^19.2.17",
@@ -202,7 +202,7 @@
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 
-    "@navarchus/cf-headers": ["@navarchus/cf-headers@0.2.1", "", { "peerDependencies": { "vite": ">=5.0.0" }, "optionalPeers": ["vite"] }, "sha512-LzasYMcljUTdMfvAwtlROVpYQjdD3EIaD6ETVgRODJ69zV/WKSmaBurBn+FNkDtMJcLa4C7QXl1VQhjw2tKibg=="],
+    "@navarchus/cf-headers": ["@navarchus/cf-headers@0.3.0", "", { "peerDependencies": { "vite": ">=5.0.0" }, "optionalPeers": ["vite"] }, "sha512-m8fVFF1L04a+juAtxULRMTVh/BP5mc0H0WIon6jG+C4woPj7vmqvY6y34drKXWHkPg2J8Swgytin3HvSJdyLIQ=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.139.0", "", {}, "sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw=="],
 

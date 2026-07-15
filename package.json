@@ -32,7 +32,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.3",
 		"@cloudflare/vite-plugin": "^1.44.0",
-		"@navarchus/cf-headers": "^0.2.1",
+		"@navarchus/cf-headers": "^0.3.0",
 		"@types/express": "^5.0.6",
 		"@types/node": "^26.1.1",
 		"@types/react": "^19.2.17",
