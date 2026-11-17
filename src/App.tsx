@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import FileUploader from './components/FileUploader';
@@ -7,6 +7,8 @@ import ChatHeader from './components/ChatHeader';
 import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
 import StarredPanel from './components/StarredPanel';
+import ResultNavigator from './components/ResultNavigator';
+import { findSearchMatches, findStarredMessages } from './utils/search';
 import type { Message, DateMapEntry } from './types';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import {
@@ -54,6 +56,9 @@ export default function App() {
 		setSearchQuery,
 		jumpToIndex,
 		setJumpToIndex,
+		navMode,
+		setNavMode,
+		activeIndex,
 		toggleSearch,
 		toggleStarred,
 		setTotalMessages,
@@ -73,6 +78,28 @@ export default function App() {
 		useStarredMessages(currentChatId, loadSavedChats);
 
 	const { jumpToMessage } = useSearchAndJump();
+
+	// Shared by the panels and the navigator so both see the same list.
+	const searchMatches = useMemo(
+		() => findSearchMatches(messages, searchQuery),
+		[messages, searchQuery],
+	);
+	const starredItems = useMemo(
+		() => findStarredMessages(messages, starredMessageIds),
+		[messages, starredMessageIds],
+	);
+	const jumpToSearchResult = useCallback(
+		(index: number) => jumpToMessage(index, 'search'),
+		[jumpToMessage],
+	);
+	const jumpToStarred = useCallback(
+		(index: number) => jumpToMessage(index, 'starred'),
+		[jumpToMessage],
+	);
+
+	const navItems = navMode === 'search' ? searchMatches : starredItems;
+	const showNavigator =
+		navMode !== null && !isSearchOpen && !isStarredOpen && navItems.length > 0;
 
 	// Stable identity: VirtualMessageList's jump effect depends on it.
 	const clearJump = useCallback(() => setJumpToIndex(null), [setJumpToIndex]);
@@ -424,16 +451,37 @@ export default function App() {
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">
 							{isConversationReady ? (
 								<>
-									<VirtualMessageList
-										messages={messages}
-										me={me}
-										searchQuery={searchQuery}
-										jumpToIndex={jumpToIndex}
-										onJumpDone={clearJump}
-										starredMessageIds={starredMessageIds}
-										onToggleStarMessage={toggleStarMessage}
-										onLoadChunk={loadChunk}
-									/>
+									<div className="flex-1 min-w-0 h-full flex flex-col">
+										<VirtualMessageList
+											messages={messages}
+											me={me}
+											searchQuery={searchQuery}
+											jumpToIndex={jumpToIndex}
+											onJumpDone={clearJump}
+											starredMessageIds={starredMessageIds}
+											onToggleStarMessage={toggleStarMessage}
+											onLoadChunk={loadChunk}
+										/>
+										{showNavigator && navMode && (
+											<ResultNavigator
+												mode={navMode}
+												label={
+													navMode === 'search' ? `"${searchQuery}"` : 'Starred'
+												}
+												items={navItems}
+												activeIndex={activeIndex}
+												onJump={(index) => jumpToMessage(index, navMode)}
+												onOpenList={
+													navMode === 'search' ? toggleSearch : toggleStarred
+												}
+												onClose={() =>
+													navMode === 'search'
+														? setSearchQuery('')
+														: setNavMode(null)
+												}
+											/>
+										)}
+									</div>
 
 									<AnimatePresence>
 										{(isSearchOpen || isStarredOpen) && (
@@ -463,10 +511,11 @@ export default function App() {
 															className="h-full flex flex-col"
 														>
 															<SearchPanel
-																messages={messages}
+																matches={searchMatches}
+																activeIndex={activeIndex}
 																searchQuery={searchQuery}
 																onSearchQueryChange={setSearchQuery}
-																onSelectMatch={jumpToMessage}
+																onSelectMatch={jumpToSearchResult}
 																onClose={() => setIsSearchOpen(false)}
 															/>
 														</motion.div>
@@ -480,9 +529,9 @@ export default function App() {
 															className="h-full flex flex-col"
 														>
 															<StarredPanel
-																messages={messages}
-																starredMessageIds={starredMessageIds}
-																onSelectMessage={jumpToMessage}
+																items={starredItems}
+																activeIndex={activeIndex}
+																onSelectMessage={jumpToStarred}
 																onClose={() => setIsStarredOpen(false)}
 																onToggleStar={toggleStarMessage}
 															/>

@@ -1,25 +1,30 @@
+import { useEffect, useRef } from 'react';
 import { Star, X, CornerDownRight } from 'lucide-react';
-import type { Message } from '../types';
+import type { SearchMatch } from '../types';
 
 interface StarredPanelProps {
-	messages: Message[];
-	starredMessageIds: Set<number>;
+	items: SearchMatch[];
+	activeIndex: number | null;
 	onSelectMessage: (index: number) => void;
 	onClose: () => void;
 	onToggleStar: (messageId: number) => void;
 }
 
 export default function StarredPanel({
-	messages,
-	starredMessageIds,
+	items: starredMessages,
+	activeIndex,
 	onSelectMessage,
 	onClose,
 	onToggleStar,
 }: StarredPanelProps) {
-	// Find starred messages and keep track of their original index in the messages array
-	const starredMessages = messages
-		.map((message, index) => ({ message, index }))
-		.filter(({ message }) => message && starredMessageIds.has(message.id));
+	const listRef = useRef<HTMLDivElement>(null);
+
+	// Reopening lands on the starred message the user was last at.
+	useEffect(() => {
+		listRef.current
+			?.querySelector('[data-active="true"]')
+			?.scrollIntoView({ block: 'center' });
+	}, []);
 
 	return (
 		<div className="w-full md:w-[380px] bg-surface border-l border-border-base flex flex-col h-full shadow-2xl md:shadow-none shrink-0 z-40 relative overflow-hidden">
@@ -40,7 +45,7 @@ export default function StarredPanel({
 			</div>
 
 			{/* Results panel */}
-			<div className="flex-1 overflow-y-auto scrollbar-thin">
+			<div ref={listRef} className="flex-1 overflow-y-auto scrollbar-thin">
 				{starredMessages.length === 0 ? (
 					<div className="p-8 text-center text-text-muted">
 						<Star className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
@@ -62,11 +67,17 @@ export default function StarredPanel({
 									message.formattedDateShort ||
 									message.rawTimestamp.split(',')[0] ||
 									'';
+								const isActive = index === activeIndex;
 
 								return (
 									<div
 										key={message.id}
-										className="w-full text-left p-4 hover:bg-surface-hover/50 transition-colors flex flex-col gap-1 font-sans relative group"
+										data-active={isActive}
+										className={`w-full text-left p-4 border-l-4 transition-colors flex flex-col gap-1 font-sans relative group ${
+											isActive
+												? 'border-border-brand bg-brand-surface'
+												: 'border-transparent hover:bg-surface-hover/50'
+										}`}
 									>
 										{/* Clicking this region jumps to the message */}
 										{/* biome-ignore lint/a11y/useSemanticElements: custom interactive region to exclude the absolute positioned unstar button */}

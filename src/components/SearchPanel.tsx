@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, CornerDownRight } from 'lucide-react';
-import type { Message, SearchMatch } from '../types';
+import type { SearchMatch } from '../types';
 
 const escapeRegExp = (str: string) =>
 	str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 interface SearchPanelProps {
-	messages: Message[];
+	matches: SearchMatch[];
+	activeIndex: number | null;
 	onSelectMatch: (index: number) => void;
 	onClose: () => void;
 	searchQuery: string;
@@ -14,13 +15,15 @@ interface SearchPanelProps {
 }
 
 export default function SearchPanel({
-	messages,
+	matches,
+	activeIndex,
 	onSelectMatch,
 	onClose,
 	searchQuery,
 	onSearchQueryChange,
 }: SearchPanelProps) {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const resultsRef = useRef<HTMLDivElement>(null);
 	const [draftQuery, setDraftQuery] = useState(searchQuery);
 
 	// Focus search input on mount after animation begins to prevent browser layout shifts
@@ -31,25 +34,13 @@ export default function SearchPanel({
 		return () => clearTimeout(timer);
 	}, []);
 
-	// Compute matches based on search query (uses pre-calculated contentLower for maximum performance)
-	const matches: SearchMatch[] = useMemo(() => {
-		if (!searchQuery || searchQuery.trim().length < 2) return [];
-
-		const queryLower = searchQuery.toLowerCase();
-		const results: SearchMatch[] = [];
-
-		// Scan through pre-indexed lowercase content
-		for (let i = 0; i < messages.length; i++) {
-			const msg = messages[i];
-			if (msg?.contentLower.includes(queryLower)) {
-				results.push({
-					index: i,
-					message: msg,
-				});
-			}
-		}
-		return results;
-	}, [messages, searchQuery]);
+	// Reopening the panel (e.g. from the navigator) lands on the result the
+	// user was last at instead of the top of the list.
+	useEffect(() => {
+		resultsRef.current
+			?.querySelector('[data-active="true"]')
+			?.scrollIntoView({ block: 'center' });
+	}, []);
 
 	// Cap visible search items in side panel to ensure extreme rendering speed (mobile optimization)
 	const MAX_SIDEBAR_MATCHES = 200;
@@ -127,7 +118,7 @@ export default function SearchPanel({
 			</div>
 
 			{/* Results panel */}
-			<div className="flex-1 overflow-y-auto scrollbar-thin">
+			<div ref={resultsRef} className="flex-1 overflow-y-auto scrollbar-thin">
 				{searchQuery.trim().length < 2 ? (
 					<div className="p-8 text-center text-text-muted">
 						<MessageSquare className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
@@ -168,13 +159,20 @@ export default function SearchPanel({
 										message.formattedDateShort ||
 										message.rawTimestamp.split(',')[0] ||
 										'';
+									const isActive = index === activeIndex;
 
 									return (
 										<button
 											key={message.id}
 											type="button"
+											data-active={isActive}
+											aria-current={isActive || undefined}
 											onClick={() => onSelectMatch(index)}
-											className="w-full text-left p-4 hover:bg-surface-hover active:bg-surface-active transition-colors focus:outline-none focus:bg-surface-hover flex flex-col gap-1 font-sans"
+											className={`w-full text-left p-4 border-l-4 transition-colors focus:outline-none flex flex-col gap-1 font-sans ${
+												isActive
+													? 'border-border-brand bg-brand-surface'
+													: 'border-transparent hover:bg-surface-hover active:bg-surface-active focus:bg-surface-hover'
+											}`}
 										>
 											<div className="flex justify-between items-baseline w-full">
 												<span className="font-semibold text-xs text-text-primary truncate max-w-[180px]">

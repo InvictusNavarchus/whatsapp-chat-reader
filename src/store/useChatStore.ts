@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { DateMapEntry } from '../types';
 
 export type AppStep = 'UPLOAD' | 'SELECT_IDENTITY' | 'READER';
+export type NavMode = 'search' | 'starred';
 
 interface ChatState {
 	step: AppStep;
@@ -20,6 +21,10 @@ interface ChatState {
 	isStarredOpen: boolean;
 	searchQuery: string;
 	jumpToIndex: number | null;
+	// Which result list the navigator steps through, and the message index
+	// it steps from (the last jump target).
+	navMode: NavMode | null;
+	activeIndex: number | null;
 
 	// Setters
 	setStep: (step: AppStep) => void;
@@ -41,6 +46,8 @@ interface ChatState {
 	closeAllPanels: () => void;
 	setSearchQuery: (query: string) => void;
 	setJumpToIndex: (index: number | null) => void;
+	setNavMode: (mode: NavMode | null) => void;
+	setActiveIndex: (index: number | null) => void;
 
 	// Unload chat / Reset UI store
 	reset: () => void;
@@ -62,6 +69,8 @@ export const useChatStore = create<ChatState>((set) => ({
 	isStarredOpen: false,
 	searchQuery: '',
 	jumpToIndex: null,
+	navMode: null,
+	activeIndex: null,
 
 	setStep: (step) => set({ step }),
 	setFileName: (fileName) => set({ fileName }),
@@ -81,8 +90,15 @@ export const useChatStore = create<ChatState>((set) => ({
 	toggleStarred: () =>
 		set((s) => ({ isSearchOpen: false, isStarredOpen: !s.isStarredOpen })),
 	closeAllPanels: () => set({ isSearchOpen: false, isStarredOpen: false }),
-	setSearchQuery: (searchQuery) => set({ searchQuery }),
+	// Clearing the query also ends search navigation; nothing to step through.
+	setSearchQuery: (searchQuery) =>
+		set((s) => ({
+			searchQuery,
+			navMode: !searchQuery && s.navMode === 'search' ? null : s.navMode,
+		})),
 	setJumpToIndex: (jumpToIndex) => set({ jumpToIndex }),
+	setNavMode: (navMode) => set({ navMode }),
+	setActiveIndex: (activeIndex) => set({ activeIndex }),
 
 	reset: () =>
 		set({
@@ -100,5 +116,7 @@ export const useChatStore = create<ChatState>((set) => ({
 			isStarredOpen: false,
 			searchQuery: '',
 			jumpToIndex: null,
+			navMode: null,
+			activeIndex: null,
 		}),
 }));
