@@ -26,6 +26,7 @@ import { useChatPersistence } from './hooks/useChatPersistence';
 import { useChunkedMessages } from './hooks/useChunkedMessages';
 import { useStarredMessages } from './hooks/useStarredMessages';
 import { useSearchAndJump } from './hooks/useSearchAndJump';
+import { usePanelHistory } from './hooks/usePanelHistory';
 
 export default function App() {
 	const queryClient = useQueryClient();
@@ -76,6 +77,7 @@ export default function App() {
 		useStarredMessages(currentChatId, loadSavedChats);
 
 	const { jumpToMessage } = useSearchAndJump();
+	usePanelHistory();
 
 	// Shared by the panels and the navigator so both see the same list.
 	const searchMatches = useMemo(
