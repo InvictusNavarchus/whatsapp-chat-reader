@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, CornerDownRight } from 'lucide-react';
 import type { SearchMatch } from '../types';
+import HistoryLoadingNotice from './HistoryLoadingNotice';
 import { MIN_SEARCH_LENGTH } from '../utils/search';
 
 const PAGE_SIZE = 200;
@@ -12,6 +13,7 @@ const escapeRegExp = (str: string) =>
 interface SearchPanelProps {
 	matches: SearchMatch[];
 	activeIndex: number | null;
+	isLoadingHistory: boolean;
 	onSelectMatch: (index: number) => void;
 	onClose: () => void;
 	searchQuery: string;
@@ -21,6 +23,7 @@ interface SearchPanelProps {
 export default function SearchPanel({
 	matches,
 	activeIndex,
+	isLoadingHistory,
 	onSelectMatch,
 	onClose,
 	searchQuery,
@@ -155,6 +158,7 @@ export default function SearchPanel({
 
 			{/* Results panel */}
 			<div ref={resultsRef} className="flex-1 overflow-y-auto scrollbar-thin">
+				{isLoadingHistory && <HistoryLoadingNotice />}
 				{searchQuery.trim().length < MIN_SEARCH_LENGTH ? (
 					<div className="p-8 text-center text-text-muted">
 						<MessageSquare className="w-10 h-10 mx-auto mb-3 text-icon-muted" />

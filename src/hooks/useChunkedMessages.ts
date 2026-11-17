@@ -107,8 +107,12 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 		setLoadedChunks,
 	]);
 
+	// True once every chunk's data is in the cache (not merely requested).
+	const isFullyLoaded = chunkData.every(Boolean);
+
 	return {
 		messages,
+		isFullyLoaded,
 		loadedChunks,
 		setLoadedChunks,
 		loadChunk,

@@ -69,10 +69,8 @@ export default function App() {
 	const { savedChats, loadSavedChats, deleteChat, renameChat } =
 		useChatPersistence();
 
-	const { messages, setLoadedChunks, loadChunk } = useChunkedMessages(
-		currentChatId,
-		step,
-	);
+	const { messages, isFullyLoaded, setLoadedChunks, loadChunk } =
+		useChunkedMessages(currentChatId, step);
 
 	const { starredMessageIds, setStarredMessageIds, toggleStarMessage } =
 		useStarredMessages(currentChatId, loadSavedChats);
@@ -514,6 +512,7 @@ export default function App() {
 																matches={searchMatches}
 																activeIndex={activeIndex}
 																searchQuery={searchQuery}
+																isLoadingHistory={!isFullyLoaded}
 																onSearchQueryChange={setSearchQuery}
 																onSelectMatch={jumpToSearchResult}
 																onClose={() => setIsSearchOpen(false)}
@@ -531,6 +530,7 @@ export default function App() {
 															<StarredPanel
 																items={starredItems}
 																activeIndex={activeIndex}
+																isLoadingHistory={!isFullyLoaded}
 																onSelectMessage={jumpToStarred}
 																onClose={() => setIsStarredOpen(false)}
 																onToggleStar={toggleStarMessage}

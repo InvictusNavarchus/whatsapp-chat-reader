@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { Star, X, CornerDownRight } from 'lucide-react';
 import type { SearchMatch } from '../types';
+import HistoryLoadingNotice from './HistoryLoadingNotice';
 
 interface StarredPanelProps {
 	items: SearchMatch[];
 	activeIndex: number | null;
+	isLoadingHistory: boolean;
 	onSelectMessage: (index: number) => void;
 	onClose: () => void;
 	onToggleStar: (messageId: number) => void;
@@ -13,6 +15,7 @@ interface StarredPanelProps {
 export default function StarredPanel({
 	items: starredMessages,
 	activeIndex,
+	isLoadingHistory,
 	onSelectMessage,
 	onClose,
 	onToggleStar,
@@ -46,6 +49,7 @@ export default function StarredPanel({
 
 			{/* Results panel */}
 			<div ref={listRef} className="flex-1 overflow-y-auto scrollbar-thin">
+				{isLoadingHistory && <HistoryLoadingNotice />}
 				{starredMessages.length === 0 ? (
 					<div className="p-8 text-center text-text-muted">
 						<Star className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
