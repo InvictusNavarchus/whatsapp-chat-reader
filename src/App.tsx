@@ -54,8 +54,8 @@ export default function App() {
 		setSearchQuery,
 		jumpToIndex,
 		setJumpToIndex,
-		openSearch,
-		openStarred,
+		toggleSearch,
+		toggleStarred,
 		setTotalMessages,
 		reset: resetStore,
 	} = useChatStore();
@@ -411,14 +411,14 @@ export default function App() {
 							participants={participants}
 							me={me}
 							onBack={handleBackToUpload}
-							onSearchToggle={openSearch}
+							onSearchToggle={toggleSearch}
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={jumpToMessage}
 							dateMap={dateMap}
 							onRename={handleRenameCurrentChat}
 							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
 							isStarredOpen={isStarredOpen}
-							onStarredToggle={openStarred}
+							onStarredToggle={toggleStarred}
 						/>
 
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">

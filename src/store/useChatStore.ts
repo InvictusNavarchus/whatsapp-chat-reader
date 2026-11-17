@@ -36,8 +36,8 @@ interface ChatState {
 	// UI panels
 	setIsSearchOpen: (open: boolean) => void;
 	setIsStarredOpen: (open: boolean) => void;
-	openSearch: () => void;
-	openStarred: () => void;
+	toggleSearch: () => void;
+	toggleStarred: () => void;
 	closeAllPanels: () => void;
 	setSearchQuery: (query: string) => void;
 	setJumpToIndex: (index: number | null) => void;
@@ -76,8 +76,10 @@ export const useChatStore = create<ChatState>((set) => ({
 
 	setIsSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
 	setIsStarredOpen: (isStarredOpen) => set({ isStarredOpen }),
-	openSearch: () => set({ isSearchOpen: true, isStarredOpen: false }),
-	openStarred: () => set({ isSearchOpen: false, isStarredOpen: true }),
+	toggleSearch: () =>
+		set((s) => ({ isSearchOpen: !s.isSearchOpen, isStarredOpen: false })),
+	toggleStarred: () =>
+		set((s) => ({ isSearchOpen: false, isStarredOpen: !s.isStarredOpen })),
 	closeAllPanels: () => set({ isSearchOpen: false, isStarredOpen: false }),
 	setSearchQuery: (searchQuery) => set({ searchQuery }),
 	setJumpToIndex: (jumpToIndex) => set({ jumpToIndex }),
