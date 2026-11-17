@@ -200,15 +200,13 @@ export default function App() {
 			if (metadata.chunkCount) {
 				dateMapList = metadata.dateMap || [];
 
-				const latestChunkIndex = metadata.chunkCount - 1;
-				const latestChunk = await getChatChunk(id, latestChunkIndex);
-				if (latestChunk) {
-					queryClient.setQueryData(
-						['chat', id, 'chunk', latestChunkIndex],
-						latestChunk,
-					);
+				// The reader opens at the top (oldest message), so seed the first
+				// chunk; the rest stream in oldest-to-newest in the background.
+				const firstChunk = await getChatChunk(id, 0);
+				if (firstChunk) {
+					queryClient.setQueryData(['chat', id, 'chunk', 0], firstChunk);
 				}
-				loaded.add(latestChunkIndex);
+				loaded.add(0);
 				setParseProgress(70);
 			} else {
 				const chatData = await getChatMessages(id);

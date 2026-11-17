@@ -63,19 +63,17 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 	useEffect(() => {
 		if (!chatId || step !== 'READER' || totalMessages === 0) return;
 
-		// Find chunks that haven't been loaded yet (i.e. not in loadedChunks)
-		const unloadedChunkIndices: number[] = [];
+		// Fetch the next unloaded chunk from oldest to newest, matching the
+		// reader's top-down starting position.
+		let targetChunkIndex = -1;
 		for (let i = 0; i < chunkCount; i++) {
 			if (!loadedChunks.has(i)) {
-				unloadedChunkIndices.push(i);
+				targetChunkIndex = i;
+				break;
 			}
 		}
 
-		if (unloadedChunkIndices.length === 0) return;
-
-		// Fetch the next unloaded chunk from latest to oldest
-		unloadedChunkIndices.sort((a, b) => b - a);
-		const targetChunkIndex = unloadedChunkIndices[0];
+		if (targetChunkIndex === -1) return;
 
 		const timer = setTimeout(() => {
 			queryClient
