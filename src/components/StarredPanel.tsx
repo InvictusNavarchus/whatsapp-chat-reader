@@ -45,8 +45,7 @@ export default function StarredPanel({
 						<Star className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">No Starred Messages</p>
 						<p className="font-sans text-xs mt-1">
-							Hover over any message in the chat and click the star icon to save
-							it here.
+							Tap the star next to any message's timestamp to save it here.
 						</p>
 					</div>
 				) : (

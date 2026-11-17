@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Devices without hover (phones, tablets). Tailwind v4 gates `hover:` behind
+   (hover: hover), so hover-revealed controls are unreachable there and need
+   this variant to stay visible. */
+@custom-variant touch (@media (hover: none));
+
 @theme {
 	--font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 	--font-display: "Space Grotesk", sans-serif;

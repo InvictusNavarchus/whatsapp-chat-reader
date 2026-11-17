@@ -225,10 +225,12 @@ const MessageBubble = memo(function MessageBubble({
 						<button
 							type="button"
 							onClick={() => onToggleStar(message.id)}
-							className={`p-0.5 rounded transition-all focus:outline-none ${
+							// -m-2 p-2 enlarges the tap target to ~30px without
+							// changing the footer layout.
+							className={`-m-2 p-2 rounded transition-all focus:outline-none ${
 								isStarred
 									? 'text-text-star hover:text-text-star scale-100'
-									: 'text-border-strong hover:text-text-star opacity-0 group-hover/msg:opacity-100 focus:opacity-100 hover:scale-110 cursor-pointer'
+									: 'text-border-strong hover:text-text-star opacity-0 group-hover/msg:opacity-100 focus:opacity-100 touch:opacity-100 touch:text-text-muted hover:scale-110 cursor-pointer'
 							}`}
 							title={isStarred ? 'Unstar message' : 'Star message'}
 						>
