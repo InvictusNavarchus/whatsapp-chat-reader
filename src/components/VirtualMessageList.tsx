@@ -157,7 +157,7 @@ const MessageBubble = memo(function MessageBubble({
 	searchQuery: string;
 	isHighlighted: boolean;
 	isStarred: boolean;
-	onToggleStar: () => void;
+	onToggleStar: (id: number) => void;
 }) {
 	const isSystem = message.isSystem;
 
@@ -224,7 +224,7 @@ const MessageBubble = memo(function MessageBubble({
 					<div className="text-[10px] text-text-muted font-mono text-right mt-1 self-end leading-none select-none flex items-center gap-1.5 min-h-[16px]">
 						<button
 							type="button"
-							onClick={onToggleStar}
+							onClick={() => onToggleStar(message.id)}
 							className={`p-0.5 rounded transition-all focus:outline-none ${
 								isStarred
 									? 'text-text-star hover:text-text-star scale-100'
@@ -256,6 +256,25 @@ interface MessageChunkProps {
 	cachedHeight: number | null;
 	highlightedId: number | null;
 	onLoadChunk: (index: number) => void;
+}
+
+// Render chunks are re-sliced from the sparse array whenever any DB chunk
+// loads, so `messages` is a new array even when its 30 items are identical.
+// Compare items by reference so unaffected chunks skip re-rendering.
+function areChunkPropsEqual(
+	prev: MessageChunkProps,
+	next: MessageChunkProps,
+): boolean {
+	for (const key of Object.keys(next) as (keyof MessageChunkProps)[]) {
+		if (key === 'messages') continue;
+		if (prev[key] !== next[key]) return false;
+	}
+	if (prev.messages === next.messages) return true;
+	if (prev.messages.length !== next.messages.length) return false;
+	for (let i = 0; i < next.messages.length; i++) {
+		if (prev.messages[i] !== next.messages[i]) return false;
+	}
+	return true;
 }
 
 const MessageChunk = memo(function MessageChunk({
@@ -358,7 +377,7 @@ const MessageChunk = memo(function MessageChunk({
 								searchQuery={searchQuery}
 								isHighlighted={isHighlighted}
 								isStarred={isStarred}
-								onToggleStar={() => onToggleStarMessage(message.id)}
+								onToggleStar={onToggleStarMessage}
 							/>
 						</div>
 					</div>
@@ -366,7 +385,7 @@ const MessageChunk = memo(function MessageChunk({
 			})}
 		</div>
 	);
-});
+}, areChunkPropsEqual);
 
 export default function VirtualMessageList({
 	messages,

@@ -4,6 +4,15 @@ import { useChatStore } from '../store/useChatStore';
 import type { Message } from '../types';
 import { getChatChunk, DB_CHUNK_SIZE } from '../utils/db';
 
+// Module-level so its identity is stable: useQueries only re-runs `combine`
+// (and returns a new reference) when a query result actually changes.
+// Without it, useQueries returns a fresh array every render, which rebuilt
+// the full sparse `messages` array and re-rendered every mounted chunk on
+// any unrelated store update.
+const combineChunkData = (
+	results: { data: Message[] | undefined }[],
+): (Message[] | undefined)[] => results.map((res) => res.data);
+
 export function useChunkedMessages(chatId: string | null, step: string) {
 	const queryClient = useQueryClient();
 	const totalMessages = useChatStore((state) => state.totalMessages);
@@ -14,7 +23,7 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 
 	// Map queries for each chunk index.
 	// Only run (enable) the query if its index is inside loadedChunks.
-	const results = useQueries({
+	const chunkData = useQueries({
 		queries: Array.from({ length: chunkCount }, (_, i) => ({
 			queryKey: ['chat', chatId, 'chunk', i],
 			queryFn: () =>
@@ -22,22 +31,23 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 			enabled: !!chatId && loadedChunks.has(i),
 			staleTime: Infinity,
 		})),
+		combine: combineChunkData,
 	});
 
 	// Assemble the flat sparse array of messages from the query results
 	const messages = useMemo(() => {
 		if (!chatId || totalMessages === 0) return [];
 		const arr = new Array<Message>(totalMessages);
-		results.forEach((res, i) => {
-			if (res.data) {
+		chunkData.forEach((data, i) => {
+			if (data) {
 				const startIdx = i * DB_CHUNK_SIZE;
-				for (let j = 0; j < res.data.length; j++) {
-					arr[startIdx + j] = res.data[j];
+				for (let j = 0; j < data.length; j++) {
+					arr[startIdx + j] = data[j];
 				}
 			}
 		});
 		return arr;
-	}, [results, chatId, totalMessages]);
+	}, [chunkData, chatId, totalMessages]);
 
 	// Mark a chunk to be loaded
 	const loadChunk = useCallback(
