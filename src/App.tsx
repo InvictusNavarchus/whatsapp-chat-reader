@@ -447,7 +447,10 @@ export default function App() {
 													damping: 25,
 													stiffness: 220,
 												}}
-												className="absolute right-0 top-0 bottom-0 h-full shadow-2xl z-40 max-w-full overflow-hidden flex flex-col"
+												// Mobile: full-screen overlay (inset-0, so it never
+												// shrink-wraps to its content). md+: docked in the flex
+												// row so the chat narrows instead of being covered.
+												className="absolute inset-0 z-40 shadow-2xl overflow-hidden flex flex-col md:static md:inset-auto md:w-[380px] md:shrink-0 md:shadow-none"
 											>
 												<AnimatePresence mode="wait" initial={false}>
 													{isSearchOpen ? (
