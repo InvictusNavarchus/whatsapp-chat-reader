@@ -1,6 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, CornerDownRight } from 'lucide-react';
 import type { SearchMatch } from '../types';
+import { MIN_SEARCH_LENGTH } from '../utils/search';
+
+const PAGE_SIZE = 200;
+const SEARCH_DEBOUNCE_MS = 250;
 
 const escapeRegExp = (str: string) =>
 	str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -26,13 +30,28 @@ export default function SearchPanel({
 	const resultsRef = useRef<HTMLDivElement>(null);
 	const [draftQuery, setDraftQuery] = useState(searchQuery);
 
-	// Focus search input on mount after animation begins to prevent browser layout shifts
+	// Only auto-focus for a fresh search. When reopening to browse existing
+	// results, focusing would pop the mobile keyboard over the list.
+	// Delayed until the slide-in animation has started to avoid layout shifts.
+	const [focusOnMount] = useState(() => !searchQuery);
 	useEffect(() => {
+		if (!focusOnMount) return;
 		const timer = setTimeout(() => {
 			inputRef.current?.focus({ preventScroll: true });
 		}, 150);
 		return () => clearTimeout(timer);
-	}, []);
+	}, [focusOnMount]);
+
+	// Live search: commit the draft after a short pause so the results never
+	// disagree with what's typed. Enter commits immediately (see submit).
+	useEffect(() => {
+		if (draftQuery === searchQuery) return;
+		const timer = setTimeout(
+			() => onSearchQueryChange(draftQuery),
+			SEARCH_DEBOUNCE_MS,
+		);
+		return () => clearTimeout(timer);
+	}, [draftQuery, searchQuery, onSearchQueryChange]);
 
 	// Reopening the panel (e.g. from the navigator) lands on the result the
 	// user was last at instead of the top of the list.
@@ -42,11 +61,27 @@ export default function SearchPanel({
 			?.scrollIntoView({ block: 'center' });
 	}, []);
 
-	// Cap visible search items in side panel to ensure extreme rendering speed (mobile optimization)
-	const MAX_SIDEBAR_MATCHES = 200;
-	const slicedMatches = useMemo(() => {
-		return matches.slice(0, MAX_SIDEBAR_MATCHES);
-	}, [matches]);
+	// Render results in pages to keep the panel fast on mobile. The page count
+	// is tied to the query it was grown for, so a new query starts at one page.
+	// The first page is sized to include the active result, so reopening from
+	// the navigator can scroll to it.
+	const [paging, setPaging] = useState(() => {
+		const activePos =
+			activeIndex === null
+				? -1
+				: matches.findIndex((m) => m.index === activeIndex);
+		return {
+			query: searchQuery,
+			count: Math.max(PAGE_SIZE, activePos + PAGE_SIZE / 4),
+		};
+	});
+	const visibleCount = paging.query === searchQuery ? paging.count : PAGE_SIZE;
+	const slicedMatches = useMemo(
+		() => matches.slice(0, visibleCount),
+		[matches, visibleCount],
+	);
+	const showMore = () =>
+		setPaging({ query: searchQuery, count: visibleCount + PAGE_SIZE });
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setDraftQuery(e.target.value);
@@ -55,6 +90,8 @@ export default function SearchPanel({
 	const handleSearchSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		onSearchQueryChange(draftQuery);
+		// Dismiss the mobile keyboard so the results are visible.
+		inputRef.current?.blur();
 	};
 
 	const clearSearch = () => {
@@ -83,43 +120,42 @@ export default function SearchPanel({
 
 			{/* Input area */}
 			<div className="p-4 border-b border-border-subtle shrink-0">
-				<form onSubmit={handleSearchSubmit} className="flex gap-2">
-					<div className="relative flex-1">
+				<form onSubmit={handleSearchSubmit}>
+					<div className="relative">
+						{/* type="text" + inputMode="search" gets the mobile search key
+						    without the native clear button duplicating ours. */}
 						<input
 							type="text"
+							inputMode="search"
+							enterKeyHint="search"
 							ref={inputRef}
 							value={draftQuery}
 							onChange={handleInputChange}
 							placeholder="Search words, phrases..."
-							className="w-full pl-9 pr-8 py-2 border border-border-base rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring-brand focus:border-transparent transition-all placeholder:text-text-muted bg-surface-hover/50"
+							className="w-full pl-9 pr-11 py-2.5 border border-border-base rounded-xl font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring-brand focus:border-transparent transition-all placeholder:text-text-muted bg-surface-hover/50"
 						/>
-						<Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" />
+						<Search className="absolute left-3 top-3 w-4 h-4 text-text-muted pointer-events-none" />
 						{draftQuery && (
 							<button
 								type="button"
 								onClick={clearSearch}
-								className="absolute right-2.5 top-2.5 p-0.5 hover:bg-surface-muted-hover rounded-full text-text-muted hover:text-text-secondary transition-colors"
+								aria-label="Clear search"
+								className="absolute right-0 top-0 h-full px-3 flex items-center text-text-muted hover:text-text-secondary transition-colors touch-manipulation"
 							>
-								<X className="w-3.5 h-3.5" />
+								<X className="w-4 h-4" />
 							</button>
 						)}
 					</div>
-					<button
-						type="submit"
-						className="px-4 py-2 bg-brand hover:bg-brand-hover text-text-inverse rounded-xl text-sm font-sans font-medium transition-colors cursor-pointer min-h-[40px] shrink-0"
-					>
-						Search
-					</button>
 				</form>
 				<p className="text-[11px] text-text-muted font-sans mt-2">
-					Type at least 2 characters and press Search. Matches are highlighted
+					Type at least {MIN_SEARCH_LENGTH} characters. Matches are highlighted
 					in the conversation.
 				</p>
 			</div>
 
 			{/* Results panel */}
 			<div ref={resultsRef} className="flex-1 overflow-y-auto scrollbar-thin">
-				{searchQuery.trim().length < 2 ? (
+				{searchQuery.trim().length < MIN_SEARCH_LENGTH ? (
 					<div className="p-8 text-center text-text-muted">
 						<MessageSquare className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">Search History</p>
@@ -140,8 +176,8 @@ export default function SearchPanel({
 						<div className="px-4 py-2 bg-surface-hover text-text-tertiary font-sans text-[11px] font-semibold border-b border-border-subtle flex items-center justify-between">
 							<span>MATCHES FOUND</span>
 							<span>
-								{matches.length > MAX_SIDEBAR_MATCHES
-									? `Showing top ${MAX_SIDEBAR_MATCHES} of ${matches.length}`
+								{matches.length > visibleCount
+									? `Showing ${visibleCount} of ${matches.length}`
 									: `${matches.length} matches`}
 							</span>
 						</div>
@@ -209,6 +245,15 @@ export default function SearchPanel({
 								});
 							})()}
 						</div>
+						{matches.length > visibleCount && (
+							<button
+								type="button"
+								onClick={showMore}
+								className="m-4 py-2.5 rounded-xl border border-border-base text-sm font-sans font-medium text-text-secondary hover:bg-surface-hover active:bg-surface-active transition-colors touch-manipulation"
+							>
+								Show {Math.min(PAGE_SIZE, matches.length - visibleCount)} more
+							</button>
+						)}
 					</div>
 				)}
 			</div>
