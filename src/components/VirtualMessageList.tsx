@@ -399,7 +399,12 @@ export default function VirtualMessageList({
 }: VirtualMessageListProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
-	const [highlightedId, setHighlightedId] = useState<number | null>(null);
+	// `seq` makes a repeat jump to the same message restart the highlight.
+	const [highlight, setHighlight] = useState<{
+		id: number;
+		seq: number;
+	} | null>(null);
+	const highlightedId = highlight?.id ?? null;
 	const [forceRenderChunkIndex, setForceRenderChunkIndex] = useState<
 		number | null
 	>(null);
@@ -447,68 +452,70 @@ export default function VirtualMessageList({
 		setShowScrollBottom(isUp);
 	};
 
-	// Jump to message logic
+	// Jump to message logic.
+	// Only scrolling lives here. Timers that must outlive the jump (highlight
+	// fade, re-centering) live in the highlight effect below: onJumpDone()
+	// clears jumpToIndex, which re-runs this effect, and its cleanup would
+	// otherwise cancel them (that bug left the highlight stuck forever).
 	useEffect(() => {
-		if (jumpToIndex !== null) {
-			const targetMessage = messages[jumpToIndex];
-			if (!targetMessage) return;
-
-			const targetChunkIndex = Math.floor(jumpToIndex / RENDER_CHUNK_SIZE);
-			console.log(
-				'Jumping to index:',
-				jumpToIndex,
-				'Message ID:',
-				targetMessage.id,
-				'Chunk Index:',
-				targetChunkIndex,
-			);
-
-			setForceRenderChunkIndex(targetChunkIndex);
-
-			let flashTimer: ReturnType<typeof setTimeout> | undefined;
-			let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-			const tryScroll = () => {
-				const el = document.getElementById(`message-${targetMessage.id}`);
-				if (el) {
-					el.scrollIntoView({ block: 'center', behavior: 'auto' });
-					setHighlightedId(targetMessage.id);
-					flashTimer = setTimeout(() => {
-						setHighlightedId(null);
-					}, 3000);
-					onJumpDone();
-					return true;
-				}
-				return false;
-			};
-
-			if (tryScroll()) {
-				return () => {
-					if (flashTimer) clearTimeout(flashTimer);
-				};
-			}
-
-			const rafId = requestAnimationFrame(() => {
-				if (tryScroll()) return;
-				timeoutId = setTimeout(() => {
-					if (!tryScroll()) {
-						onJumpDone();
-					}
-				}, 60);
-			});
-
-			const clearForceTimer = setTimeout(() => {
-				setForceRenderChunkIndex(null);
-			}, 1200);
-
-			return () => {
-				cancelAnimationFrame(rafId);
-				if (timeoutId) clearTimeout(timeoutId);
-				if (flashTimer) clearTimeout(flashTimer);
-				clearTimeout(clearForceTimer);
-			};
+		if (jumpToIndex === null) return;
+		const targetMessage = messages[jumpToIndex];
+		if (!targetMessage) {
+			// Target's DB chunk isn't loaded yet (e.g. a calendar jump far ahead
+			// of background prefetch). Request it; this effect re-runs once
+			// `messages` includes it.
+			onLoadChunk(Math.floor(jumpToIndex / DB_CHUNK_SIZE));
+			return;
 		}
-	}, [jumpToIndex, messages, onJumpDone]);
+
+		setForceRenderChunkIndex(Math.floor(jumpToIndex / RENDER_CHUNK_SIZE));
+
+		let rafId = 0;
+		let attempts = 0;
+		const tryScroll = () => {
+			const el = document.getElementById(`message-${targetMessage.id}`);
+			if (!el) {
+				// The forced chunk needs a commit (and on mobile the panel is
+				// animating out), so retry for ~0.5s before giving up.
+				if (++attempts < 30) {
+					rafId = requestAnimationFrame(tryScroll);
+				} else {
+					onJumpDone();
+				}
+				return;
+			}
+			el.scrollIntoView({ block: 'center', behavior: 'auto' });
+			setHighlight((prev) => ({
+				id: targetMessage.id,
+				seq: (prev?.seq ?? 0) + 1,
+			}));
+			onJumpDone();
+		};
+		tryScroll();
+
+		return () => cancelAnimationFrame(rafId);
+	}, [jumpToIndex, messages, onJumpDone, onLoadChunk]);
+
+	useEffect(() => {
+		if (!highlight) return;
+		// Neighbouring chunks mount right after the jump and swap estimated
+		// heights for real ones, which can push the target off-centre (scroll
+		// anchoring doesn't cover this everywhere, e.g. older iOS Safari).
+		// Re-centre once after they've settled.
+		const settleTimer = setTimeout(() => {
+			document
+				.getElementById(`message-${highlight.id}`)
+				?.scrollIntoView({ block: 'center', behavior: 'auto' });
+		}, 150);
+		const clearTimer = setTimeout(() => {
+			setHighlight(null);
+			setForceRenderChunkIndex(null);
+		}, 2500);
+		return () => {
+			clearTimeout(settleTimer);
+			clearTimeout(clearTimer);
+		};
+	}, [highlight]);
 
 	const scrollToBottom = () => {
 		if (parentRef.current) {

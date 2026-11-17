@@ -74,6 +74,9 @@ export default function App() {
 
 	const { jumpToMessage } = useSearchAndJump();
 
+	// Stable identity: VirtualMessageList's jump effect depends on it.
+	const clearJump = useCallback(() => setJumpToIndex(null), [setJumpToIndex]);
+
 	const handleParseComplete = useCallback(
 		({
 			messages: parsed,
@@ -426,7 +429,7 @@ export default function App() {
 										me={me}
 										searchQuery={searchQuery}
 										jumpToIndex={jumpToIndex}
-										onJumpDone={() => setJumpToIndex(null)}
+										onJumpDone={clearJump}
 										starredMessageIds={starredMessageIds}
 										onToggleStarMessage={toggleStarMessage}
 										onLoadChunk={loadChunk}
