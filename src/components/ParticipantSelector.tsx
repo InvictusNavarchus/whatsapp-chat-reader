@@ -28,8 +28,8 @@ export default function ParticipantSelector({
 			id="participant-selector-container"
 			className="w-full max-w-xl mx-auto px-4 py-8 flex flex-col items-center"
 		>
-			<div className="w-full bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-100 mb-6">
-				<div className="flex items-center gap-2 mb-4 text-emerald-600">
+			<div className="w-full bg-surface rounded-2xl p-6 md:p-8 shadow-sm border border-border-subtle mb-6">
+				<div className="flex items-center gap-2 mb-4 text-text-brand">
 					<BookOpen className="w-5 h-5" />
 					<span className="font-sans font-semibold text-xs uppercase tracking-wider">
 						File Loaded Successfully
@@ -37,22 +37,22 @@ export default function ParticipantSelector({
 				</div>
 
 				<h2
-					className="font-display text-2xl font-semibold text-neutral-900 mb-2 truncate"
+					className="font-display text-2xl font-semibold text-text-primary mb-2 truncate"
 					title={fileName}
 				>
 					{fileName}
 				</h2>
-				<p className="text-neutral-500 font-sans text-xs md:text-sm mb-6 flex items-center gap-2">
-					<MessageSquare className="w-4 h-4 text-neutral-400" />
+				<p className="text-text-tertiary font-sans text-xs md:text-sm mb-6 flex items-center gap-2">
+					<MessageSquare className="w-4 h-4 text-text-muted" />
 					Parsed {totalMessages.toLocaleString()} messages across{' '}
 					{participants.length} participants.
 				</p>
 
-				<div className="border-t border-neutral-100 pt-6 mb-6">
-					<h3 className="font-sans font-medium text-neutral-800 text-sm md:text-base mb-1.5">
+				<div className="border-t border-border-subtle pt-6 mb-6">
+					<h3 className="font-sans font-medium text-text-primary text-sm md:text-base mb-1.5">
 						Who are you in this chat?
 					</h3>
-					<p className="text-neutral-400 font-sans text-xs mb-4">
+					<p className="text-text-muted font-sans text-xs mb-4">
 						Select your participant name to align your messages on the right (as
 						outgoing). All other participants will be shown on the left (as
 						incoming).
@@ -71,22 +71,22 @@ export default function ParticipantSelector({
 									key={name}
 									type="button"
 									onClick={() => onSelectMe(name)}
-									className="w-full flex items-center justify-between p-3.5 hover:bg-neutral-50 active:bg-neutral-100 border border-neutral-100 hover:border-neutral-200 rounded-xl transition-all text-left font-sans group focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+									className="w-full flex items-center justify-between p-3.5 hover:bg-surface-hover active:bg-surface-active border border-border-subtle hover:border-border-base rounded-xl transition-all text-left font-sans group focus:outline-none focus:ring-2 focus:ring-ring-brand min-h-[44px]"
 								>
 									<div className="flex items-center gap-3 min-w-0">
-										<div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+										<div className="w-8 h-8 rounded-full bg-brand-surface-hover text-text-brand-hover flex items-center justify-center shrink-0">
 											<User className="w-4 h-4" />
 										</div>
 										<div className="min-w-0">
-											<p className="font-medium text-neutral-800 truncate pr-2 text-sm md:text-base">
+											<p className="font-medium text-text-primary truncate pr-2 text-sm md:text-base">
 												{name}
 											</p>
-											<p className="text-neutral-400 text-xs">
+											<p className="text-text-muted text-xs">
 												{count.toLocaleString()} messages ({percentage}%)
 											</p>
 										</div>
 									</div>
-									<ArrowRight className="w-4 h-4 text-neutral-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+									<ArrowRight className="w-4 h-4 text-border-strong group-hover:text-text-brand group-hover:translate-x-0.5 transition-all shrink-0" />
 								</button>
 							);
 						})}
@@ -96,7 +96,7 @@ export default function ParticipantSelector({
 				<button
 					type="button"
 					onClick={() => onSelectMe(null)}
-					className="w-full text-center py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-sans font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-300 min-h-[44px]"
+					className="w-full text-center py-3 bg-surface-active hover:bg-surface-muted-hover text-text-secondary rounded-xl font-sans font-medium text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring-base min-h-[44px]"
 				>
 					Read as Guest (No sender alignment)
 				</button>

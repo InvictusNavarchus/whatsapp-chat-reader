@@ -162,10 +162,10 @@ export default function FileUploader({
 			className="w-full max-w-2xl mx-auto px-4 py-8 md:py-16 flex flex-col items-center"
 		>
 			<div className="text-center mb-8">
-				<h1 className="font-display text-4xl font-semibold tracking-tight text-neutral-900 mb-3">
+				<h1 className="font-display text-4xl font-semibold tracking-tight text-text-primary mb-3">
 					WhatsApp Chat Reader
 				</h1>
-				<p className="text-neutral-500 font-sans max-w-md mx-auto text-sm md:text-base leading-relaxed">
+				<p className="text-text-tertiary font-sans max-w-md mx-auto text-sm md:text-base leading-relaxed">
 					An offline-first, blazing-fast reader designed to render, search, and
 					navigate large exported WhatsApp chat logs beautifully.
 				</p>
@@ -179,10 +179,10 @@ export default function FileUploader({
 				onDragLeave={onDragLeave}
 				onDrop={onDrop}
 				onClick={() => fileInputRef.current?.click()}
-				className={`w-full bg-white rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+				className={`w-full bg-surface rounded-2xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-200 shadow-sm flex flex-col items-center justify-center min-h-[200px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring-brand focus:ring-offset-2 ${
 					isDragging
-						? 'border-emerald-500 bg-emerald-50/40 scale-[0.99]'
-						: 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/50'
+						? 'border-border-brand bg-brand-surface/40 scale-[0.99]'
+						: 'border-border-base hover:border-border-strong hover:bg-surface-hover/50'
 				}`}
 			>
 				<input
@@ -194,27 +194,27 @@ export default function FileUploader({
 				/>
 
 				<span
-					className={`p-4 rounded-full mb-4 transition-colors inline-flex ${isDragging ? 'bg-emerald-100 text-emerald-600' : 'bg-neutral-50 text-neutral-400 group-hover:bg-neutral-100'}`}
+					className={`p-4 rounded-full mb-4 transition-colors inline-flex ${isDragging ? 'bg-brand-surface-hover text-text-brand' : 'bg-surface-hover text-text-muted group-hover:bg-surface-active'}`}
 				>
 					<Upload className="w-8 h-8" />
 				</span>
 
-				<span className="font-sans font-medium text-neutral-800 text-base mb-1 block">
+				<span className="font-sans font-medium text-text-primary text-base mb-1 block">
 					{isDragging
 						? 'Drop your chat file here!'
 						: 'Drag & drop your chat .txt file here'}
 				</span>
-				<span className="font-sans text-neutral-400 text-xs md:text-sm mb-4 block">
+				<span className="font-sans text-text-muted text-xs md:text-sm mb-4 block">
 					or click to browse your local files
 				</span>
 
-				<span className="px-3 py-1 bg-neutral-100 text-neutral-600 font-mono text-[10px] uppercase tracking-wider rounded-md font-semibold inline-block">
+				<span className="px-3 py-1 bg-surface-active text-text-secondary font-mono text-[10px] uppercase tracking-wider rounded-md font-semibold inline-block">
 					Supports iOS & Android formats
 				</span>
 			</button>
 
 			{error && (
-				<div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-100 text-sm max-w-full">
+				<div className="mt-4 flex items-center gap-2 text-text-error bg-error-surface px-4 py-3 rounded-xl border border-border-error text-sm max-w-full">
 					<AlertCircle className="w-4 h-4 shrink-0" />
 					<p className="font-sans">{error}</p>
 				</div>
@@ -225,7 +225,7 @@ export default function FileUploader({
 				<button
 					type="button"
 					onClick={loadDemo}
-					className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl font-sans font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2 touch-manipulation min-h-[44px]"
+					className="flex items-center gap-2 px-5 py-2.5 bg-text-primary hover:bg-text-secondary text-text-inverse rounded-xl font-sans font-medium text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-text-primary focus:ring-offset-2 touch-manipulation min-h-[44px]"
 				>
 					<BookOpen className="w-4 h-4" />
 					Load Sample Weekend Chat
@@ -235,11 +235,11 @@ export default function FileUploader({
 			{/* Saved Chats List */}
 			{savedChats.length > 0 && (
 				<div className="mt-10 w-full">
-					<h3 className="font-sans font-semibold text-neutral-800 text-sm md:text-base mb-4 flex items-center gap-2">
-						<History className="w-4 h-4 text-emerald-600" />
+					<h3 className="font-sans font-semibold text-text-primary text-sm md:text-base mb-4 flex items-center gap-2">
+						<History className="w-4 h-4 text-text-brand" />
 						Recently Read Chats
 					</h3>
-					<div className="bg-white rounded-2xl border border-neutral-200/60 shadow-sm divide-y divide-neutral-100 overflow-hidden w-full">
+					<div className="bg-surface rounded-2xl border border-border-base/60 shadow-sm divide-y divide-neutral-100 overflow-hidden w-full">
 						{savedChats.map((chat) => {
 							const displayName = chat.fileName.replace(/\.[^/.]+$/, '');
 							const isEditing = editingId === chat.id;
@@ -261,7 +261,7 @@ export default function FileUploader({
 												onLoadSavedChat(chat.id);
 											}
 										}}
-										className="group p-4 hover:bg-neutral-50/50 transition-colors flex items-center justify-between gap-4 cursor-pointer focus:outline-none focus-visible:bg-neutral-50/50"
+										className="group p-4 hover:bg-surface-hover/50 transition-colors flex items-center justify-between gap-4 cursor-pointer focus:outline-none focus-visible:bg-surface-hover/50"
 									>
 										<div className="min-w-0 flex-1">
 											{isEditing ? (
@@ -282,11 +282,11 @@ export default function FileUploader({
 																if (editingId === chat.id) cancelRename();
 															}, 200);
 														}}
-														className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight bg-neutral-50 border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-full max-w-xs"
+														className="font-sans font-semibold text-text-primary text-sm md:text-base leading-tight bg-surface-hover border border-border-strong rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring-brand focus:border-border-brand w-full max-w-xs"
 													/>
 													<button
 														type="submit"
-														className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg"
+														className="p-1.5 hover:bg-brand-surface text-text-brand rounded-lg"
 														title="Confirm rename"
 													>
 														<Check className="w-4 h-4" />
@@ -294,7 +294,7 @@ export default function FileUploader({
 													<button
 														type="button"
 														onClick={cancelRename}
-														className="p-1.5 hover:bg-neutral-100 text-neutral-500 rounded-lg"
+														className="p-1.5 hover:bg-surface-active text-text-tertiary rounded-lg"
 														title="Cancel"
 													>
 														<X className="w-4 h-4" />
@@ -302,10 +302,10 @@ export default function FileUploader({
 												</form>
 											) : (
 												<>
-													<h4 className="font-sans font-semibold text-neutral-800 text-sm md:text-base leading-tight truncate group-hover:text-emerald-700 transition-colors">
+													<h4 className="font-sans font-semibold text-text-primary text-sm md:text-base leading-tight truncate group-hover:text-text-brand-hover transition-colors">
 														{displayName}
 													</h4>
-													<div className="text-neutral-400 font-sans text-xs flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+													<div className="text-text-muted font-sans text-xs flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
 														<span className="flex items-center gap-1">
 															<Users className="w-3.5 h-3.5" />
 															{chat.participants.length}
@@ -322,7 +322,7 @@ export default function FileUploader({
 														{chat.me && (
 															<>
 																<span>•</span>
-																<span className="text-emerald-600/80 font-medium">
+																<span className="text-text-brand/80 font-medium">
 																	Me: {chat.me}
 																</span>
 															</>
@@ -337,7 +337,7 @@ export default function FileUploader({
 												<button
 													type="button"
 													onClick={(e) => startRename(e, chat)}
-													className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors focus:outline-none"
+													className="p-2 text-text-muted hover:text-text-secondary hover:bg-surface-active rounded-lg transition-colors focus:outline-none"
 													title="Rename chat log"
 												>
 													<Pencil className="w-4 h-4" />
@@ -348,7 +348,7 @@ export default function FileUploader({
 														e.stopPropagation();
 														onDeleteSavedChat(chat.id);
 													}}
-													className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors focus:outline-none"
+													className="p-2 text-text-muted hover:text-text-error hover:bg-error-surface rounded-lg transition-colors focus:outline-none"
 													title="Delete saved chat"
 												>
 													<Trash2 className="w-4 h-4" />
@@ -364,14 +364,14 @@ export default function FileUploader({
 			)}
 
 			{/* Instructions Card */}
-			<div className="mt-10 w-full bg-neutral-50 rounded-2xl p-6 md:p-8 border border-neutral-100">
-				<h3 className="font-sans font-semibold text-neutral-800 text-sm md:text-base mb-4 flex items-center gap-2">
-					<FileText className="w-4 h-4 text-emerald-600" />
+			<div className="mt-10 w-full bg-surface-hover rounded-2xl p-6 md:p-8 border border-border-subtle">
+				<h3 className="font-sans font-semibold text-text-primary text-sm md:text-base mb-4 flex items-center gap-2">
+					<FileText className="w-4 h-4 text-text-brand" />
 					How to export your chat from WhatsApp:
 				</h3>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs md:text-sm text-neutral-600">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs md:text-sm text-text-secondary">
 					<div>
-						<h4 className="font-sans font-medium text-neutral-800 mb-1.5">
+						<h4 className="font-sans font-medium text-text-primary mb-1.5">
 							For iOS (iPhone)
 						</h4>
 						<ol className="list-decimal list-inside space-y-1 font-sans leading-relaxed">
@@ -386,7 +386,7 @@ export default function FileUploader({
 							</li>
 							<li>
 								Save the exported{' '}
-								<code className="font-mono bg-neutral-100 px-1 rounded">
+								<code className="font-mono bg-surface-active px-1 rounded">
 									_chat.txt
 								</code>{' '}
 								file.
@@ -394,7 +394,7 @@ export default function FileUploader({
 						</ol>
 					</div>
 					<div>
-						<h4 className="font-sans font-medium text-neutral-800 mb-1.5">
+						<h4 className="font-sans font-medium text-text-primary mb-1.5">
 							For Android
 						</h4>
 						<ol className="list-decimal list-inside space-y-1 font-sans leading-relaxed">
@@ -409,7 +409,7 @@ export default function FileUploader({
 							</li>
 							<li>
 								Save the exported{' '}
-								<code className="font-mono bg-neutral-100 px-1 rounded">
+								<code className="font-mono bg-surface-active px-1 rounded">
 									WhatsApp Chat with ....txt
 								</code>{' '}
 								file.
@@ -417,9 +417,9 @@ export default function FileUploader({
 						</ol>
 					</div>
 				</div>
-				<div className="mt-6 pt-4 border-t border-neutral-100 flex items-start gap-2.5">
-					<AlertCircle className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
-					<p className="font-sans text-xs text-neutral-400 leading-relaxed">
+				<div className="mt-6 pt-4 border-t border-border-subtle flex items-start gap-2.5">
+					<AlertCircle className="w-4 h-4 text-text-muted shrink-0 mt-0.5" />
+					<p className="font-sans text-xs text-text-muted leading-relaxed">
 						<strong>Security & Privacy:</strong> This reader is 100%
 						offline-first. Your uploaded chat file is parsed completely inside
 						your local browser. No data, text, or file content is ever
