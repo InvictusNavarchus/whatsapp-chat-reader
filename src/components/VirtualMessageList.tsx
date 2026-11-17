@@ -435,13 +435,24 @@ export default function VirtualMessageList({
 		});
 	}, []);
 
-	// Reset cached heights on window resize
+	// Cached heights depend only on the list's width (text wrapping).
+	// Height-only resizes, such as mobile URL bar or keyboard changes,
+	// must not discard them: placeholders would snap back to estimates and
+	// shift the content. Observing the container rather than the window
+	// also catches width changes that come from layout (e.g. a docked panel).
 	useEffect(() => {
-		const handleResize = () => {
-			setChunkHeights({});
-		};
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
+		const el = parentRef.current;
+		if (!el) return;
+		let lastWidth = el.clientWidth;
+		const observer = new ResizeObserver(() => {
+			const width = el.clientWidth;
+			if (width !== lastWidth) {
+				lastWidth = width;
+				setChunkHeights({});
+			}
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
 	}, []);
 
 	// Handle scrolling to bottom and showing/hiding the button
