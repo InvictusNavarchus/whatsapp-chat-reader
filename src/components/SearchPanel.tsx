@@ -67,21 +67,26 @@ export default function SearchPanel({
 		if (container && active) centerInScrollContainer(container, active);
 	}, []);
 
-	// Render results in pages to keep the panel fast on mobile. The page count
-	// is tied to the query it was grown for, so a new query starts at one page.
-	// The first page is sized to include the active result, so reopening from
-	// the navigator can scroll to it.
-	const [paging, setPaging] = useState(() => {
-		const activePos =
+	// Render results in pages to keep the panel fast on mobile. The
+	// user-requested page count is tied to the query it was grown for, so a
+	// new query starts at one page. The active result's position is
+	// re-derived every render (not captured once): matches from older chunks
+	// that load later are inserted before it and push it down, and it must
+	// stay rendered so reopening from the navigator can scroll to it.
+	const [paging, setPaging] = useState({
+		query: searchQuery,
+		count: PAGE_SIZE,
+	});
+	const requestedCount =
+		paging.query === searchQuery ? paging.count : PAGE_SIZE;
+	const activePos = useMemo(
+		() =>
 			activeIndex === null
 				? -1
-				: matches.findIndex((m) => m.index === activeIndex);
-		return {
-			query: searchQuery,
-			count: Math.max(PAGE_SIZE, activePos + PAGE_SIZE / 4),
-		};
-	});
-	const visibleCount = paging.query === searchQuery ? paging.count : PAGE_SIZE;
+				: matches.findIndex((m) => m.index === activeIndex),
+		[matches, activeIndex],
+	);
+	const visibleCount = Math.max(requestedCount, activePos + PAGE_SIZE / 4);
 	const slicedMatches = useMemo(
 		() => matches.slice(0, visibleCount),
 		[matches, visibleCount],
