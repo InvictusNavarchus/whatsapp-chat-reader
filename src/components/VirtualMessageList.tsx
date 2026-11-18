@@ -227,7 +227,7 @@ const MessageBubble = memo(function MessageBubble({
 							onClick={() => onToggleStar(message.id)}
 							// -m-2 p-2 enlarges the tap target to ~30px without
 							// changing the footer layout.
-							className={`-m-2 p-2 rounded transition-all focus:outline-none ${
+							className={`-m-2 p-2 rounded transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand ${
 								isStarred
 									? 'text-text-star hover:text-text-star scale-100'
 									: 'text-border-strong hover:text-text-star opacity-0 group-hover/msg:opacity-100 focus:opacity-100 touch:opacity-100 touch:text-text-muted hover:scale-110 cursor-pointer'

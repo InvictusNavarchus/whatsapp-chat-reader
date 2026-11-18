@@ -94,6 +94,15 @@ export default function SearchPanel({
 	const showMore = () =>
 		setPaging({ query: searchQuery, count: visibleCount + PAGE_SIZE });
 
+	const searchStatus =
+		searchQuery.trim().length < MIN_SEARCH_LENGTH
+			? ''
+			: `${
+					matches.length === 0
+						? `No results for "${searchQuery}"`
+						: `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`
+				}${isLoadingHistory ? '. Still loading messages, results may be incomplete.' : ''}`;
+
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setDraftQuery(e.target.value);
 	};
@@ -123,7 +132,7 @@ export default function SearchPanel({
 					type="button"
 					onClick={onClose}
 					aria-label="Close panel"
-					className="p-2.5 -m-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
+					className="p-2.5 -m-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
 				>
 					<X className="w-4 h-4" />
 				</button>
@@ -158,6 +167,12 @@ export default function SearchPanel({
 						)}
 					</div>
 				</form>
+				{/* Live search changes results while focus stays in the input,
+				    so screen readers need the outcome announced. Always mounted:
+				    a live region must exist before its text changes. */}
+				<p role="status" className="sr-only">
+					{searchStatus}
+				</p>
 				<p className="text-[11px] text-text-muted font-sans mt-2">
 					Type at least {MIN_SEARCH_LENGTH} characters. Matches are highlighted
 					in the conversation.

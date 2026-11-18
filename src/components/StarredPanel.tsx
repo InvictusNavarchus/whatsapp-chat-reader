@@ -44,7 +44,7 @@ export default function StarredPanel({
 					type="button"
 					onClick={onClose}
 					aria-label="Close panel"
-					className="p-2.5 -m-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
+					className="p-2.5 -m-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
 				>
 					<X className="w-4 h-4" />
 				</button>
@@ -125,7 +125,7 @@ export default function StarredPanel({
 										<button
 											type="button"
 											onClick={() => onToggleStar(message.id)}
-											className="absolute right-2 top-2 p-3 hover:bg-surface-active text-text-star hover:text-text-muted rounded-lg transition-colors focus:outline-none touch-manipulation"
+											className="absolute right-2 top-2 p-3 hover:bg-surface-active text-text-star hover:text-text-muted rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand touch-manipulation"
 											title="Unstar message"
 										>
 											<Star className="w-4 h-4 fill-star" />
