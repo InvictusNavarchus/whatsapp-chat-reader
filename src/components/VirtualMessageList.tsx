@@ -481,7 +481,18 @@ export default function VirtualMessageList({
 			return;
 		}
 
-		setForceRenderChunkIndex(Math.floor(jumpToIndex / RENDER_CHUNK_SIZE));
+		// A render chunk (30) can straddle two DB chunks (500), e.g. 990–1019.
+		// MessageChunk shows a spinner while its first message is missing, so
+		// the target can't appear until that DB chunk is loaded too. Wait for
+		// it rather than burning the retry budget below and dropping the jump.
+		const renderChunkIndex = Math.floor(jumpToIndex / RENDER_CHUNK_SIZE);
+		const renderChunkStart = renderChunkIndex * RENDER_CHUNK_SIZE;
+		if (!messages[renderChunkStart]) {
+			onLoadChunk(Math.floor(renderChunkStart / DB_CHUNK_SIZE));
+			return;
+		}
+
+		setForceRenderChunkIndex(renderChunkIndex);
 
 		let rafId = 0;
 		let attempts = 0;
@@ -493,6 +504,9 @@ export default function VirtualMessageList({
 				if (++attempts < 30) {
 					rafId = requestAnimationFrame(tryScroll);
 				} else {
+					// No highlight is set on this path, so the highlight effect
+					// won't release the forced chunk; do it here.
+					setForceRenderChunkIndex(null);
 					onJumpDone();
 				}
 				return;
