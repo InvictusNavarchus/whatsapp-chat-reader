@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Star, X, CornerDownRight } from 'lucide-react';
 import type { SearchMatch } from '../types';
 import HistoryLoadingNotice from './HistoryLoadingNotice';
+import { centerInScrollContainer } from '../utils/scroll';
 
 interface StarredPanelProps {
 	items: SearchMatch[];
@@ -24,9 +25,11 @@ export default function StarredPanel({
 
 	// Reopening lands on the starred message the user was last at.
 	useEffect(() => {
-		listRef.current
-			?.querySelector('[data-active="true"]')
-			?.scrollIntoView({ block: 'center' });
+		const container = listRef.current;
+		const active = container?.querySelector<HTMLElement>(
+			'[data-active="true"]',
+		);
+		if (container && active) centerInScrollContainer(container, active);
 	}, []);
 
 	return (

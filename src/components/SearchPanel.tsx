@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, CornerDownRight } from 'lucide-react';
 import type { SearchMatch } from '../types';
 import HistoryLoadingNotice from './HistoryLoadingNotice';
+import { centerInScrollContainer } from '../utils/scroll';
 import { MIN_SEARCH_LENGTH } from '../utils/search';
 
 const PAGE_SIZE = 200;
@@ -59,9 +60,11 @@ export default function SearchPanel({
 	// Reopening the panel (e.g. from the navigator) lands on the result the
 	// user was last at instead of the top of the list.
 	useEffect(() => {
-		resultsRef.current
-			?.querySelector('[data-active="true"]')
-			?.scrollIntoView({ block: 'center' });
+		const container = resultsRef.current;
+		const active = container?.querySelector<HTMLElement>(
+			'[data-active="true"]',
+		);
+		if (container && active) centerInScrollContainer(container, active);
 	}, []);
 
 	// Render results in pages to keep the panel fast on mobile. The page count
