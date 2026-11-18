@@ -83,8 +83,12 @@ export function useChunkedMessages(chatId: string | null, step: string) {
 					staleTime: Infinity,
 				})
 				.then(() => {
-					// Once cached, enable it in our loadedChunks set to merge into the messages list
-					setLoadedChunks(new Set([...loadedChunks, targetChunkIndex]));
+					// Once cached, enable it in loadedChunks to merge into the
+					// messages list. Read the latest set: `loadedChunks` here is
+					// the snapshot from when this prefetch started, and an
+					// on-demand load (e.g. a jump) may have added chunks since.
+					const latest = useChatStore.getState().loadedChunks;
+					setLoadedChunks(new Set([...latest, targetChunkIndex]));
 				})
 				.catch((err) => {
 					console.error(
