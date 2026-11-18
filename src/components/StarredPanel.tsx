@@ -1,25 +1,36 @@
+import { useEffect, useRef } from 'react';
 import { Star, X, CornerDownRight } from 'lucide-react';
-import type { Message } from '../types';
+import type { SearchMatch } from '../types';
+import HistoryLoadingNotice from './HistoryLoadingNotice';
+import { centerInScrollContainer } from '../utils/scroll';
 
 interface StarredPanelProps {
-	messages: Message[];
-	starredMessageIds: Set<number>;
+	items: SearchMatch[];
+	activeIndex: number | null;
+	isLoadingHistory: boolean;
 	onSelectMessage: (index: number) => void;
 	onClose: () => void;
 	onToggleStar: (messageId: number) => void;
 }
 
 export default function StarredPanel({
-	messages,
-	starredMessageIds,
+	items: starredMessages,
+	activeIndex,
+	isLoadingHistory,
 	onSelectMessage,
 	onClose,
 	onToggleStar,
 }: StarredPanelProps) {
-	// Find starred messages and keep track of their original index in the messages array
-	const starredMessages = messages
-		.map((message, index) => ({ message, index }))
-		.filter(({ message }) => message && starredMessageIds.has(message.id));
+	const listRef = useRef<HTMLDivElement>(null);
+
+	// Reopening lands on the starred message the user was last at.
+	useEffect(() => {
+		const container = listRef.current;
+		const active = container?.querySelector<HTMLElement>(
+			'[data-active="true"]',
+		);
+		if (container && active) centerInScrollContainer(container, active);
+	}, []);
 
 	return (
 		<div className="w-full md:w-[380px] bg-surface border-l border-border-base flex flex-col h-full shadow-2xl md:shadow-none shrink-0 z-40 relative overflow-hidden">
@@ -32,21 +43,22 @@ export default function StarredPanel({
 				<button
 					type="button"
 					onClick={onClose}
-					className="p-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none touch-manipulation min-h-[36px]"
+					aria-label="Close panel"
+					className="p-2.5 -m-1.5 hover:bg-surface-active text-text-muted hover:text-text-secondary rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center"
 				>
 					<X className="w-4 h-4" />
 				</button>
 			</div>
 
 			{/* Results panel */}
-			<div className="flex-1 overflow-y-auto scrollbar-thin">
+			<div ref={listRef} className="flex-1 overflow-y-auto scrollbar-thin">
+				{isLoadingHistory && <HistoryLoadingNotice />}
 				{starredMessages.length === 0 ? (
 					<div className="p-8 text-center text-text-muted">
 						<Star className="w-10 h-10 mx-auto mb-3 text-icon-muted" />
 						<p className="font-sans text-sm font-medium">No Starred Messages</p>
 						<p className="font-sans text-xs mt-1">
-							Hover over any message in the chat and click the star icon to save
-							it here.
+							Tap the star next to any message's timestamp to save it here.
 						</p>
 					</div>
 				) : (
@@ -62,11 +74,17 @@ export default function StarredPanel({
 									message.formattedDateShort ||
 									message.rawTimestamp.split(',')[0] ||
 									'';
+								const isActive = index === activeIndex;
 
 								return (
 									<div
 										key={message.id}
-										className="w-full text-left p-4 hover:bg-surface-hover/50 transition-colors flex flex-col gap-1 font-sans relative group"
+										data-active={isActive}
+										className={`w-full text-left p-4 border-l-4 transition-colors flex flex-col gap-1 font-sans relative group ${
+											isActive
+												? 'border-border-brand bg-brand-surface'
+												: 'border-transparent hover:bg-surface-hover/50'
+										}`}
 									>
 										{/* Clicking this region jumps to the message */}
 										{/* biome-ignore lint/a11y/useSemanticElements: custom interactive region to exclude the absolute positioned unstar button */}
@@ -107,7 +125,7 @@ export default function StarredPanel({
 										<button
 											type="button"
 											onClick={() => onToggleStar(message.id)}
-											className="absolute right-4 top-4 p-1.5 hover:bg-surface-active text-text-star hover:text-text-muted rounded-lg transition-colors focus:outline-none"
+											className="absolute right-2 top-2 p-3 hover:bg-surface-active text-text-star hover:text-text-muted rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-brand touch-manipulation"
 											title="Unstar message"
 										>
 											<Star className="w-4 h-4 fill-star" />

@@ -138,20 +138,22 @@ export default function ChatHeader({
 							<button
 								type="button"
 								onClick={handleStartEditing}
-								className="p-1 hover:bg-surface-active rounded text-text-muted hover:text-text-secondary opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity focus:outline-none"
+								className="p-1.5 -m-0.5 hover:bg-surface-active rounded text-text-muted hover:text-text-secondary opacity-0 group-hover/title:opacity-100 focus:opacity-100 touch:opacity-100 transition-opacity focus:outline-none"
 								title="Rename chat log"
 							>
 								<Pencil className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					)}
-					<p className="text-text-muted font-sans text-[11px] leading-tight flex items-center gap-2 truncate mt-0.5">
-						<span className="flex items-center gap-0.5">
+					{/* On narrow screens the participant count is dropped so the
+					    "Me" switcher keeps room; it shrinks with an ellipsis last. */}
+					<p className="text-text-muted font-sans text-[11px] leading-tight flex items-center gap-2 whitespace-nowrap overflow-hidden mt-0.5">
+						<span className="hidden sm:flex items-center gap-0.5 shrink-0">
 							<Users className="w-3 h-3" />
 							{participants.length} participants
 						</span>
-						<span>•</span>
-						<span className="flex items-center gap-0.5">
+						<span className="hidden sm:inline">•</span>
+						<span className="flex items-center gap-0.5 shrink-0">
 							<MessageSquare className="w-3 h-3" />
 							{messages.length.toLocaleString()} messages
 						</span>
@@ -159,7 +161,7 @@ export default function ChatHeader({
 						<button
 							type="button"
 							onClick={onChangeIdentity}
-							className="text-text-brand hover:text-text-brand-hover font-medium truncate hover:underline focus:outline-none flex items-center gap-0.5 cursor-pointer"
+							className="text-text-brand hover:text-text-brand-hover font-medium truncate min-w-0 hover:underline focus:outline-none cursor-pointer"
 							title="Change who 'Me' is"
 						>
 							{me ? `Me: ${me}` : 'Set "Me" identity'}

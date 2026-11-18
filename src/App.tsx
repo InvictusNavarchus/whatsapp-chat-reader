@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import FileUploader from './components/FileUploader';
@@ -7,6 +7,8 @@ import ChatHeader from './components/ChatHeader';
 import VirtualMessageList from './components/VirtualMessageList';
 import SearchPanel from './components/SearchPanel';
 import StarredPanel from './components/StarredPanel';
+import ResultNavigator from './components/ResultNavigator';
+import { findSearchMatches, findStarredMessages } from './utils/search';
 import type { Message, DateMapEntry } from './types';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import {
@@ -24,6 +26,7 @@ import { useChatPersistence } from './hooks/useChatPersistence';
 import { useChunkedMessages } from './hooks/useChunkedMessages';
 import { useStarredMessages } from './hooks/useStarredMessages';
 import { useSearchAndJump } from './hooks/useSearchAndJump';
+import { usePanelHistory } from './hooks/usePanelHistory';
 
 export default function App() {
 	const queryClient = useQueryClient();
@@ -54,8 +57,11 @@ export default function App() {
 		setSearchQuery,
 		jumpToIndex,
 		setJumpToIndex,
-		openSearch,
-		openStarred,
+		navMode,
+		setNavMode,
+		activeIndex,
+		toggleSearch,
+		toggleStarred,
 		setTotalMessages,
 		reset: resetStore,
 	} = useChatStore();
@@ -64,15 +70,39 @@ export default function App() {
 	const { savedChats, loadSavedChats, deleteChat, renameChat } =
 		useChatPersistence();
 
-	const { messages, setLoadedChunks, loadChunk } = useChunkedMessages(
-		currentChatId,
-		step,
-	);
+	const { messages, isFullyLoaded, setLoadedChunks, loadChunk } =
+		useChunkedMessages(currentChatId, step);
 
 	const { starredMessageIds, setStarredMessageIds, toggleStarMessage } =
 		useStarredMessages(currentChatId, loadSavedChats);
 
 	const { jumpToMessage } = useSearchAndJump();
+	usePanelHistory();
+
+	// Shared by the panels and the navigator so both see the same list.
+	const searchMatches = useMemo(
+		() => findSearchMatches(messages, searchQuery),
+		[messages, searchQuery],
+	);
+	const starredItems = useMemo(
+		() => findStarredMessages(messages, starredMessageIds),
+		[messages, starredMessageIds],
+	);
+	const jumpToSearchResult = useCallback(
+		(index: number) => jumpToMessage(index, 'search'),
+		[jumpToMessage],
+	);
+	const jumpToStarred = useCallback(
+		(index: number) => jumpToMessage(index, 'starred'),
+		[jumpToMessage],
+	);
+
+	const navItems = navMode === 'search' ? searchMatches : starredItems;
+	const showNavigator =
+		navMode !== null && !isSearchOpen && !isStarredOpen && navItems.length > 0;
+
+	// Stable identity: VirtualMessageList's jump effect depends on it.
+	const clearJump = useCallback(() => setJumpToIndex(null), [setJumpToIndex]);
 
 	const handleParseComplete = useCallback(
 		({
@@ -200,15 +230,13 @@ export default function App() {
 			if (metadata.chunkCount) {
 				dateMapList = metadata.dateMap || [];
 
-				const latestChunkIndex = metadata.chunkCount - 1;
-				const latestChunk = await getChatChunk(id, latestChunkIndex);
-				if (latestChunk) {
-					queryClient.setQueryData(
-						['chat', id, 'chunk', latestChunkIndex],
-						latestChunk,
-					);
+				// The reader opens at the top (oldest message), so seed the first
+				// chunk; the rest stream in oldest-to-newest in the background.
+				const firstChunk = await getChatChunk(id, 0);
+				if (firstChunk) {
+					queryClient.setQueryData(['chat', id, 'chunk', 0], firstChunk);
 				}
-				loaded.add(latestChunkIndex);
+				loaded.add(0);
 				setParseProgress(70);
 			} else {
 				const chatData = await getChatMessages(id);
@@ -410,29 +438,50 @@ export default function App() {
 							participants={participants}
 							me={me}
 							onBack={handleBackToUpload}
-							onSearchToggle={openSearch}
+							onSearchToggle={toggleSearch}
 							isSearchOpen={isSearchOpen}
 							onJumpToMessage={jumpToMessage}
 							dateMap={dateMap}
 							onRename={handleRenameCurrentChat}
 							onChangeIdentity={() => setStep('SELECT_IDENTITY')}
 							isStarredOpen={isStarredOpen}
-							onStarredToggle={openStarred}
+							onStarredToggle={toggleStarred}
 						/>
 
 						<div className="flex-1 flex flex-row overflow-hidden relative justify-center items-stretch">
 							{isConversationReady ? (
 								<>
-									<VirtualMessageList
-										messages={messages}
-										me={me}
-										searchQuery={searchQuery}
-										jumpToIndex={jumpToIndex}
-										onJumpDone={() => setJumpToIndex(null)}
-										starredMessageIds={starredMessageIds}
-										onToggleStarMessage={toggleStarMessage}
-										onLoadChunk={loadChunk}
-									/>
+									<div className="flex-1 min-w-0 h-full flex flex-col">
+										<VirtualMessageList
+											messages={messages}
+											me={me}
+											searchQuery={searchQuery}
+											jumpToIndex={jumpToIndex}
+											onJumpDone={clearJump}
+											starredMessageIds={starredMessageIds}
+											onToggleStarMessage={toggleStarMessage}
+											onLoadChunk={loadChunk}
+										/>
+										{showNavigator && navMode && (
+											<ResultNavigator
+												mode={navMode}
+												label={
+													navMode === 'search' ? `"${searchQuery}"` : 'Starred'
+												}
+												items={navItems}
+												activeIndex={activeIndex}
+												onJump={(index) => jumpToMessage(index, navMode)}
+												onOpenList={
+													navMode === 'search' ? toggleSearch : toggleStarred
+												}
+												onClose={() =>
+													navMode === 'search'
+														? setSearchQuery('')
+														: setNavMode(null)
+												}
+											/>
+										)}
+									</div>
 
 									<AnimatePresence>
 										{(isSearchOpen || isStarredOpen) && (
@@ -446,7 +495,10 @@ export default function App() {
 													damping: 25,
 													stiffness: 220,
 												}}
-												className="absolute right-0 top-0 bottom-0 h-full shadow-2xl z-40 max-w-full overflow-hidden flex flex-col"
+												// Mobile: full-screen overlay (inset-0, so it never
+												// shrink-wraps to its content). md+: docked in the flex
+												// row so the chat narrows instead of being covered.
+												className="absolute inset-0 z-40 shadow-2xl overflow-hidden flex flex-col md:static md:inset-auto md:w-[380px] md:shrink-0 md:shadow-none"
 											>
 												<AnimatePresence mode="wait" initial={false}>
 													{isSearchOpen ? (
@@ -459,10 +511,12 @@ export default function App() {
 															className="h-full flex flex-col"
 														>
 															<SearchPanel
-																messages={messages}
+																matches={searchMatches}
+																activeIndex={activeIndex}
 																searchQuery={searchQuery}
+																isLoadingHistory={!isFullyLoaded}
 																onSearchQueryChange={setSearchQuery}
-																onSelectMatch={jumpToMessage}
+																onSelectMatch={jumpToSearchResult}
 																onClose={() => setIsSearchOpen(false)}
 															/>
 														</motion.div>
@@ -476,9 +530,10 @@ export default function App() {
 															className="h-full flex flex-col"
 														>
 															<StarredPanel
-																messages={messages}
-																starredMessageIds={starredMessageIds}
-																onSelectMessage={jumpToMessage}
+																items={starredItems}
+																activeIndex={activeIndex}
+																isLoadingHistory={!isFullyLoaded}
+																onSelectMessage={jumpToStarred}
 																onClose={() => setIsStarredOpen(false)}
 																onToggleStar={toggleStarMessage}
 															/>

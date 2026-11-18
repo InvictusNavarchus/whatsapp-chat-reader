@@ -1,32 +1,30 @@
 import { useCallback } from 'react';
-import { useChatStore } from '../store/useChatStore';
+import { type NavMode, useChatStore } from '../store/useChatStore';
 
 export function useSearchAndJump() {
-	const isSearchOpen = useChatStore((state) => state.isSearchOpen);
-	const setIsSearchOpen = useChatStore((state) => state.setIsSearchOpen);
-	const searchQuery = useChatStore((state) => state.searchQuery);
-	const setSearchQuery = useChatStore((state) => state.setSearchQuery);
-	const jumpToIndex = useChatStore((state) => state.jumpToIndex);
 	const setJumpToIndex = useChatStore((state) => state.setJumpToIndex);
+	const setActiveIndex = useChatStore((state) => state.setActiveIndex);
+	const setNavMode = useChatStore((state) => state.setNavMode);
 	const closeAllPanels = useChatStore((state) => state.closeAllPanels);
 
+	/**
+	 * Jump to a message. `source` marks which result list the jump came from,
+	 * so the navigator can step through it. Calendar jumps pass none but still
+	 * move the anchor, so prev/next continue from the new position.
+	 */
 	const jumpToMessage = useCallback(
-		(index: number) => {
+		(index: number, source?: NavMode) => {
 			setJumpToIndex(index);
-			if (window.innerWidth < 768) {
+			setActiveIndex(index);
+			if (source) setNavMode(source);
+			// Phones can't show the chat beside the panel. Close it so the jump
+			// is visible; the result navigator takes over from here.
+			if (window.matchMedia('(max-width: 767px)').matches) {
 				closeAllPanels();
 			}
 		},
-		[setJumpToIndex, closeAllPanels],
+		[setJumpToIndex, setActiveIndex, setNavMode, closeAllPanels],
 	);
 
-	return {
-		isSearchOpen,
-		setIsSearchOpen,
-		searchQuery,
-		setSearchQuery,
-		jumpToIndex,
-		setJumpToIndex,
-		jumpToMessage,
-	};
+	return { jumpToMessage };
 }
